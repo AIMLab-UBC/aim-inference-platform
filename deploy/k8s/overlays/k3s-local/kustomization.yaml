@@ -2,9 +2,10 @@
 # weights under /data/models). hostPath volumes instead of NFS; GPU
 # scheduling needs the NVIDIA device plugin and the nvidia containerd runtime.
 #
-# Model workers pull from Azure Container Registry (aimlabacr); gateway and
-# tissue-api stay on the local :dev tags. Argo CD Image Updater rewrites the
-# worker newTag values after each pipeline push.
+# Model workers and tissue-api pull from Azure Container Registry (aimlabacr);
+# the gateway stays on its local :dev tag. Argo CD Image Updater rewrites the
+# worker newTag values after each pipeline push; the tissue-api pipeline
+# restarts its Deployment itself (it never scales from zero).
 #
 #   kubectl apply -k deploy/k8s/overlays/k3s-local
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -23,6 +24,10 @@ images:
     newTag: main
   - name: aimlab/aim-inference-worker-pdac
     newName: aimlabacr.azurecr.io/aimlab/aim-inference-worker-pdac
+    newTag: main
+  # Built by the aim-inference-tissue-api repo's pipeline.
+  - name: aimlab/aim-inference-tissue-api
+    newName: aimlabacr.azurecr.io/aimlab/aim-inference-tissue-api
     newTag: main
 patches:
   - path: hostpath-volumes.yaml
@@ -70,13 +75,13 @@ patches:
       - op: add
         path: /spec/template/spec/runtimeClassName
         value: nvidia
-  # Only the four ACR-backed model workers need the registry pull secret
-  # (tissue-api is labelled aim.inference/model=sam3 and must not get it).
-  # They track the moving :main tag, so pull on every pod start; otherwise a
-  # node with a cached :main keeps running the old build.
+  # The ACR-backed Deployments (four model workers + tissue-api, labelled
+  # aim.inference/model=sam3) need the registry pull secret. They track the
+  # moving :main tag, so pull on every pod start; otherwise a node with a
+  # cached :main keeps running the old build.
   - target:
       kind: Deployment
-      labelSelector: aim.inference/model in (pdac, hovernet, ec_cancer, deepliif)
+      labelSelector: aim.inference/model in (pdac, hovernet, ec_cancer, deepliif, sam3)
     patch: |
       - op: add
         path: /spec/template/spec/imagePullSecrets
@@ -117,6 +122,18 @@ patches:
       - op: add
         path: /spec/ports/0/nodePort
         value: 30080
+  # tissue-api is always on and AIMViewer calls it synchronously, so a
+  # rollout (the tissue-api pipeline restarts it after each build) starts the
+  # new pod before stopping the old one. The surge pod needs one free GPU
+  # slot (8 slots on this host); if none is free the rollout waits and the
+  # old pod keeps serving.
+  - target:
+      kind: Deployment
+      name: tissue-api
+    patch: |
+      - op: replace
+        path: /spec/strategy/rollingUpdate
+        value: {maxSurge: 1, maxUnavailable: 0}
   # And the tissue helpers, which AIMViewer calls synchronously.
   - target:
       kind: Service
