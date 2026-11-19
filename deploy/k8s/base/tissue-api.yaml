@@ -67,12 +67,20 @@ spec:
             httpGet: {path: /health, port: http}
             periodSeconds: 10
             failureThreshold: 90
+          # /health answers while SAM3 runs (the model runs in a worker
+          # thread), but give it slack: the k8s default 1 s timeout made one
+          # busy minute look like an outage and pulled the pod out of the
+          # Service ("connection refused" in Batch AI).
           readinessProbe:
             httpGet: {path: /health, port: http}
             periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 4
           livenessProbe:
             httpGet: {path: /health, port: http}
             periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 6
           volumeMounts:
             - name: model-weights
               mountPath: /models

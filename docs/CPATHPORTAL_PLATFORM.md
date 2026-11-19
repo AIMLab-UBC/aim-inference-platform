@@ -294,7 +294,9 @@ because they pull `:main` on every pod start.
    - add the image to the `images:` block and the `acr-pull` label selector in
      `overlays/k3s-local/kustomization.yaml`;
    - add it to the Image Updater `image-list` annotation;
-   - put the weights under `/data/models`.
+   - put the weights under `/data/models`;
+   - let the cluster pull the image: `az acr scope-map update -r aimlabacr -n k3s-pull-scope-map --add-repository aimlab/aim-inference-worker-<name> content/read`
+     (the `acr-pull` token can only read the repositories listed there).
 4. Push both repos and sync Argo CD. The gateway lists the model in
    `GET /v1/models` and the portal shows it once the user's group has been
    granted the model.
