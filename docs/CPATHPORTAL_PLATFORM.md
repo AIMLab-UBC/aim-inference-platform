@@ -13,6 +13,7 @@ Deeper references:
 | k3s manifests, Argo CD, Day-2 commands | [`deploy/k8s/README.md`](../deploy/k8s/README.md) |
 | Azure DevOps bootstrap | [`deploy/azure-devops/README.md`](../deploy/azure-devops/README.md) |
 | Adding a model | [`ADDING_NEW_AI_MODELS.md`](../ADDING_NEW_AI_MODELS.md) |
+| CI/CD setup tutorial (HTML, how to wire another repo by hand) | [`CI_CD_SETUP_TUTORIAL.html`](CI_CD_SETUP_TUTORIAL.html) |
 | Portal pages, Batch AI, patients | `aimviewer/docs/PORTAL.md` |
 | How AIMViewer calls the gateway | `aimviewer/docs/AI_INFERENCE_GATEWAY.md` |
 | Sign-in (Entra ID + MFA) | `aimviewer/docs/ENTRA_SSO.md` |

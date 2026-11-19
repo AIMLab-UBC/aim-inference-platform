@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>cPathPortal CI/CD setup tutorial — GitHub → Azure DevOps → ACR → k3s</title>
+<style>
+  :root {
+    --bg: #f7f5f1;
+    --ink: #1c1b19;
+    --muted: #5c574e;
+    --line: #d9d2c4;
+    --card: #fffefb;
+    --accent: #0f5c4c;
+    --accent-soft: #e4f1ed;
+    --warn: #7a4a00;
+    --warn-bg: #fff4df;
+    --danger: #8a1f1f;
+    --danger-bg: #fceceb;
+    --code-bg: #1e1f22;
+    --code-fg: #e8e6e3;
+    --radius: 10px;
+    --max: 920px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font: 16px/1.55 "Source Serif 4", "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+    color: var(--ink);
+    background:
+      radial-gradient(ellipse 80% 40% at 10% -10%, #dfece8 0%, transparent 55%),
+      radial-gradient(ellipse 60% 30% at 100% 0%, #efe6d6 0%, transparent 50%),
+      var(--bg);
+  }
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 2.5rem 1.25rem 5rem; }
+  header.hero {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 1.75rem;
+    margin-bottom: 2rem;
+  }
+  .eyebrow {
+    font: 600 0.78rem/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 0.6rem;
+  }
+  h1 {
+    font-family: "Fraunces", "Source Serif 4", Georgia, serif;
+    font-weight: 650;
+    font-size: clamp(1.9rem, 3.5vw, 2.55rem);
+    line-height: 1.15;
+    margin: 0 0 0.75rem;
+    letter-spacing: -0.02em;
+  }
+  .lede { color: var(--muted); font-size: 1.08rem; max-width: 42rem; margin: 0; }
+  nav.toc {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.25rem 1.2rem;
+    margin: 1.75rem 0 2.25rem;
+  }
+  nav.toc h2 { font-size: 0.95rem; margin: 0 0 0.6rem; }
+  nav.toc ol { margin: 0; padding-left: 1.25rem; }
+  nav.toc li { margin: 0.25rem 0; }
+  nav.toc a { color: var(--accent); text-decoration: none; }
+  nav.toc a:hover { text-decoration: underline; }
+  h2 {
+    font-family: "Fraunces", Georgia, serif;
+    font-size: 1.55rem;
+    margin: 2.4rem 0 0.85rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid var(--line);
+  }
+  h3 { font-size: 1.15rem; margin: 1.6rem 0 0.55rem; }
+  h4 { font-size: 1rem; margin: 1.2rem 0 0.4rem; color: var(--muted); }
+  p, li { max-width: 44rem; }
+  a { color: var(--accent); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 0.85rem 0 1.25rem;
+  }
+  th, td {
+    text-align: left;
+    vertical-align: top;
+    padding: 0.55rem 0.7rem;
+    border-bottom: 1px solid var(--line);
+  }
+  th { background: var(--accent-soft); font-weight: 650; }
+  tr:last-child td { border-bottom: 0; }
+  code, kbd {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.86em;
+    background: #efeae0;
+    padding: 0.08em 0.35em;
+    border-radius: 4px;
+  }
+  pre {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font: 0.82rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    margin: 0.7rem 0 1.2rem;
+  }
+  pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
+  .note, .warn, .danger {
+    border-radius: var(--radius);
+    padding: 0.85rem 1rem;
+    margin: 1rem 0 1.25rem;
+    border: 1px solid;
+  }
+  .note { background: var(--accent-soft); border-color: #b7d5cb; }
+  .warn { background: var(--warn-bg); border-color: #e4c788; color: var(--warn); }
+  .danger { background: var(--danger-bg); border-color: #e3b0b0; color: var(--danger); }
+  .note strong, .warn strong, .danger strong { display: block; margin-bottom: 0.2rem; }
+  .flow {
+    display: grid;
+    gap: 0.55rem;
+    margin: 1rem 0 1.4rem;
+  }
+  .flow .step {
+    display: grid;
+    grid-template-columns: 2.2rem 1fr;
+    gap: 0.75rem;
+    align-items: start;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.85rem 1rem;
+  }
+  .flow .n {
+    width: 2.2rem; height: 2.2rem;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    display: grid; place-items: center;
+    font: 700 0.9rem/1 ui-sans-serif, system-ui, sans-serif;
+  }
+  .flow .step h4 { margin: 0.1rem 0 0.25rem; color: var(--ink); font-size: 1rem; }
+  .flow .step p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+  .checklist { list-style: none; padding-left: 0; }
+  .checklist li {
+    position: relative;
+    padding: 0.35rem 0 0.35rem 1.8rem;
+    border-bottom: 1px dashed var(--line);
+  }
+  .checklist li::before {
+    content: "☐";
+    position: absolute; left: 0; top: 0.35rem;
+    color: var(--accent); font-size: 1.05rem;
+  }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem;
+    margin: 1rem 0;
+  }
+  @media (max-width: 720px) { .two-col { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.9rem 1rem;
+  }
+  .card h4 { margin-top: 0; color: var(--ink); }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .diagram {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    white-space: pre;
+    background: #12201c;
+    color: #d7ebe4;
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    margin: 0.8rem 0 1.2rem;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <p class="eyebrow">cPathPortal · extract_areas · November 2026</p>
+  <h1>CI/CD setup tutorial</h1>
+  <p class="lede">
+    How the GitHub → Azure DevOps → Azure Container Registry → k3s path was built,
+    why each piece exists, and exactly how to wire a <strong>new model worker repo</strong>
+    by hand so a push to <code>main</code> rebuilds the image and the cluster can run it.
+  </p>
+</header>
+
+<nav class="toc" aria-label="Table of contents">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#big-picture">What you are building</a></li>
+    <li><a href="#inventory">What already exists on this host</a></li>
+    <li><a href="#prereqs">One-time platform prerequisites</a></li>
+    <li><a href="#how-it-was-built">How the current system was set up</a></li>
+    <li><a href="#add-repo">Do this yourself for another repo (manual)</a></li>
+    <li><a href="#webhook">Webhooks and CI triggers (the common failure)</a></li>
+    <li><a href="#k8s">Wire the new image into k3s / Argo CD</a></li>
+    <li><a href="#verify">Verify end to end</a></li>
+    <li><a href="#day2">Day-2 operations</a></li>
+    <li><a href="#troubleshoot">Troubleshooting</a></li>
+    <li><a href="#checklist">Printable checklist</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="big-picture">1. What you are building</h2>
+
+<p>
+  Each GPU model (PDAC, HoVer-Net, EC, DeepLIIF, …) lives in its <strong>own private GitHub repo</strong>.
+  That repo does <em>not</em> contain the shared worker runtime. It only contains:
+</p>
+<ul>
+  <li>model code (<code>models/</code>, optional <code>module/</code>)</li>
+  <li><code>requirements.txt</code></li>
+  <li>a thin <code>Dockerfile</code> that starts <code>FROM</code> a shared base image</li>
+  <li><code>azure-pipelines.yml</code></li>
+</ul>
+
+<p>
+  The shared runtime (queue client, health endpoints, overlay writer, Redis glue) is published
+  once from <code>pouya-codes/extract_areas</code> as:
+</p>
+<pre><code>aimlabacr.azurecr.io/aimlab/aim-inference-worker-base:main</code></pre>
+
+<p>A push to a model repo’s <code>main</code> should do this automatically:</p>
+
+<div class="diagram">Developer
+   │  git push origin main
+   ▼
+GitHub (pouya-codes/aim-inference-worker-&lt;name&gt;)
+   │  webhook (installed by Azure DevOps)
+   ▼
+Azure DevOps pipeline  worker-&lt;name&gt;
+   │  runs on self-hosted agent pool  k3s-host  (this VM)
+   │  docker build FROM worker-base:main
+   ▼
+Azure Container Registry  aimlabacr
+   │  tags: :&lt;12-char-sha&gt;  and  :main
+   ▼
+k3s Deployment  worker-&lt;name&gt;
+   │  imagePullPolicy: Always + secret acr-pull
+   │  next KEDA scale-up (or rollout restart) pulls new :main
+   ▼
+Pod runs inference from Redis stream  inference:tasks:&lt;model&gt;</div>
+
+<div class="warn">
+  <strong>Do not enable PR triggers on these pipelines.</strong>
+  They push the mutable <code>:main</code> tag that production pods pull.
+  A PR build would overwrite the live image with unmerged code.
+  Leave <code>pr: none</code> in YAML.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="inventory">2. What already exists on this host</h2>
+
+<p>You do <strong>not</strong> recreate these for every new model. They are shared.</p>
+
+<table>
+  <thead><tr><th>Piece</th><th>Value</th><th>Role</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Azure DevOps org / project</td>
+      <td><code>aimlabdev</code> / <code>cpathportal</code></td>
+      <td>Owns pipelines and service connections</td>
+    </tr>
+    <tr>
+      <td>Agent pool</td>
+      <td><code>k3s-host</code> · agent <code>ai-cpathportal-k3s</code></td>
+      <td>Builds Docker images on the GPU host (<code>/home/ubuntu/azdo-agent</code>)</td>
+    </tr>
+    <tr>
+      <td>GitHub service connection</td>
+      <td><code>github-extract-areas</code></td>
+      <td>Checkout + webhook installation on GitHub repos</td>
+    </tr>
+    <tr>
+      <td>ARM service connection</td>
+      <td><code>aim-inference-acr</code></td>
+      <td>Lets <code>AzureCLI@2</code> run <code>az acr login</code> and push</td>
+    </tr>
+    <tr>
+      <td>ACR</td>
+      <td><code>aimlabacr.azurecr.io</code> in <code>rg-aim-inference</code></td>
+      <td>Stores <code>aimlab/aim-inference-worker-*</code> images</td>
+    </tr>
+    <tr>
+      <td>k3s pull secret</td>
+      <td><code>acr-pull</code> in namespace <code>aim-inference</code></td>
+      <td>Lets worker pods pull private ACR images</td>
+    </tr>
+    <tr>
+      <td>Argo CD app</td>
+      <td><code>aim-inference</code></td>
+      <td>Tracks <code>extract_areas</code> branch <code>aimviwer2-AI</code>, path <code>deploy/k8s/overlays/k3s-local</code></td>
+    </tr>
+    <tr>
+      <td>Template repo</td>
+      <td><code>pouya-codes/aim-inference-worker-template</code></td>
+      <td>Starting point for a new model repo</td>
+    </tr>
+    <tr>
+      <td>Existing pipelines</td>
+      <td><code>worker-base</code>, <code>worker-pdac</code>, <code>worker-hovernet</code>, <code>worker-ec</code>, <code>worker-deepliif</code></td>
+      <td>Already green; use as copy-paste references</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Related docs in this folder:</p>
+<ul>
+  <li><a href="CPATHPORTAL_PLATFORM.md"><code>CPATHPORTAL_PLATFORM.md</code></a> — full architecture</li>
+  <li><a href="../ADDING_NEW_AI_MODELS.md"><code>ADDING_NEW_AI_MODELS.md</code></a> — model code / <code>BaseAIModel</code></li>
+  <li><a href="../deploy/k8s/README.md"><code>deploy/k8s/README.md</code></a> — Day-2 cluster operations</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="prereqs">3. One-time platform prerequisites</h2>
+
+<p>
+  These were done once when CI was first stood up. Skip them when adding a model
+  <em>unless</em> you are building a new environment from scratch.
+</p>
+
+<h3>3.1 Azure: resource group + ACR</h3>
+<pre><code># Already done on this subscription ("Azure credit")
+az group create -n rg-aim-inference -l eastus2
+az acr create -n aimlabacr -g rg-aim-inference --sku Basic
+# Resulting login server: aimlabacr.azurecr.io</code></pre>
+
+<p>
+  An AcrPush service principal and a read-only pull token (<code>k3s-pull</code>) were created
+  and saved under <code>~/.config/aimlabacr-*</code> on this host only. The pull credentials
+  feed the Kubernetes secret <code>acr-pull</code>.
+</p>
+
+<h3>3.2 Azure DevOps project + PAT</h3>
+<ol>
+  <li>Org: <a href="https://dev.azure.com/aimlabdev">https://dev.azure.com/aimlabdev</a></li>
+  <li>Project: <code>cpathportal</code></li>
+  <li>Create a Personal Access Token with at least:
+    Agent Pools (Read &amp; manage), Build (Read &amp; execute), Code (Read),
+    Service Connections (Read, query &amp; manage).</li>
+</ol>
+
+<pre><code>export AZURE_DEVOPS_EXT_PAT='…'
+export ADO_ORG=https://dev.azure.com/aimlabdev
+az devops configure --defaults organization="$ADO_ORG" project=cpathportal</code></pre>
+
+<h3>3.3 Self-hosted agent pool <code>k3s-host</code></h3>
+<p>
+  Builds need the host’s Docker daemon, NVIDIA runtime, and local disk — so they
+  run on this VM, not Microsoft-hosted agents.
+</p>
+<ol>
+  <li>Create agent pool <code>k3s-host</code> in Project settings → Agent pools.</li>
+  <li>Install the agent under <code>/home/ubuntu/azdo-agent</code>
+      (<code>deploy/azure-devops/install-agent.sh</code>).</li>
+  <li>The agent process must be in the <code>docker</code> group, or every push fails with
+      <code>permission denied</code> on <code>/var/run/docker.sock</code>.</li>
+</ol>
+
+<div class="warn">
+  <strong>Reboot caveat.</strong>
+  The agent was started by hand with
+  <code>sg docker -c './bin/Agent.Listener run --startuptype service'</code>.
+  It is <em>not</em> yet a durable systemd unit. After a reboot, start it again
+  (or finish <code>./svc.sh install</code>).
+</div>
+
+<h3>3.4 Service connections</h3>
+
+<div class="two-col">
+  <div class="card">
+    <h4>GitHub · <code>github-extract-areas</code></h4>
+    <p>
+      Project settings → Service connections → New → <strong>GitHub</strong> (OAuth or GitHub App).
+      Grant access to every <code>pouya-codes/aim-inference-worker-*</code> repo
+      <em>and</em> <code>extract_areas</code>. The account needs <strong>admin</strong> on those repos
+      so Azure DevOps can create webhooks.
+    </p>
+  </div>
+  <div class="card">
+    <h4>Azure Resource Manager · <code>aim-inference-acr</code></h4>
+    <p>
+      Points at the subscription that owns ACR. Used by the
+      <code>AzureCLI@2</code> task. Enable it for all pipelines (or authorize each pipeline
+      on first run).
+    </p>
+  </div>
+</div>
+
+<h3>3.5 Shared base image pipeline</h3>
+<p>
+  Pipeline <code>worker-base</code> (id 1) builds from
+  <code>pouya-codes/extract_areas</code> / <code>azure-pipelines.yml</code> on branches
+  <code>main</code> and <code>aimviwer2-AI</code>, but only when platform / Docker paths change.
+  It pushes <code>aim-inference-worker-base:&lt;sha&gt;</code> and <code>:main</code>.
+</p>
+<p>
+  Model repos <strong>depend</strong> on that <code>:main</code> tag. If you change the shared
+  runtime, rebuild the base, then rebuild each model (queue their pipelines or push a no-op commit).
+</p>
+
+<!-- ============================================================ -->
+<h2 id="how-it-was-built">4. How the current system was set up</h2>
+
+<p>This is the historical path that produced today’s four model pipelines.</p>
+
+<div class="flow">
+  <div class="step">
+    <div class="n">1</div>
+    <div>
+      <h4>Split models out of the monorepo</h4>
+      <p>
+        <code>scripts/seed_model_repos.sh</code> created local checkouts with a thin Dockerfile,
+        requirements, model code, README, and <code>azure-pipelines.yml</code>.
+        <code>scripts/push_model_repos.sh</code> created private GitHub repos and pushed
+        <code>main</code> (token used only on the push URL, never stored in <code>.git/config</code>).
+      </p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="n">2</div>
+    <div>
+      <h4>Publish <code>worker-base</code></h4>
+      <p>
+        Added a <code>worker-base</code> stage to <code>docker/Dockerfile</code>, trimmed
+        <code>azure-pipelines.yml</code> so platform CI builds only the base (not the four models),
+        and fixed CI to set <code>TARGETS=worker-base</code> and skip SSH-only submodules.
+      </p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="n">3</div>
+    <div>
+      <h4>Register one Azure Pipeline per GitHub repo</h4>
+      <p>
+        Pipelines 3–6 were created against GitHub via service connection
+        <code>github-extract-areas</code>, pool <code>k3s-host</code>, YAML path
+        <code>azure-pipelines.yml</code>. Early attempts that pointed at Azure DevOps
+        mirror repos failed checkout auth — they were re-pointed to GitHub.
+      </p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="n">4</div>
+    <div>
+      <h4>Fix the first green builds</h4>
+      <p>
+        Order matters: set a private <code>DOCKER_CONFIG</code> <em>before</em>
+        <code>az acr login</code>, then build/tag/push. Grant the agent Docker socket access.
+        Keep <code>pr: none</code>.
+      </p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="n">5</div>
+    <div>
+      <h4>Point k3s workers at ACR <code>:main</code></h4>
+      <p>
+        Overlay <code>deploy/k8s/overlays/k3s-local</code> rewrites image names to
+        <code>aimlabacr.azurecr.io/aimlab/…:main</code>, adds <code>imagePullSecrets: acr-pull</code>,
+        sets <code>imagePullPolicy: Always</code>, and keeps KEDA max replicas at 4 (one per T4).
+      </p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="n">6</div>
+    <div>
+      <h4>Restore missing GitHub webhooks</h4>
+      <p>
+        Because some pipelines were re-pointed with an API PATCH, GitHub had
+        <strong>no webhooks</strong>. Saving a YAML CI trigger on each definition made
+        Azure DevOps install the push hook. Without that step, commits never queue a build.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="add-repo">5. Do this yourself for another repo (manual)</h2>
+
+<p>
+  Replace <code>&lt;name&gt;</code> everywhere with a short slug matching the gateway model id
+  (letters, digits, underscores). Example: <code>tumor_grader</code> → repo
+  <code>aim-inference-worker-tumor-grader</code>, pipeline <code>worker-tumor-grader</code>,
+  image <code>aim-inference-worker-tumor-grader</code>.
+</p>
+
+<h3>Step A — Create the GitHub repository</h3>
+<ol>
+  <li>Open <a href="https://github.com/pouya-codes/aim-inference-worker-template">aim-inference-worker-template</a>.</li>
+  <li>Use <strong>Use this template → Create a new repository</strong>.</li>
+  <li>Owner: <code>pouya-codes</code>. Name: <code>aim-inference-worker-&lt;name&gt;</code>. Private.</li>
+  <li>Or clone the template locally and push:
+<pre><code>gh repo create pouya-codes/aim-inference-worker-&lt;name&gt; \
+  --private --template pouya-codes/aim-inference-worker-template</code></pre>
+  </li>
+  <li>In GitHub → the Azure Pipelines / OAuth app used by <code>github-extract-areas</code> →
+      grant this new repo. Admin access is required for webhooks.</li>
+</ol>
+
+<h3>Step B — Fill in the model contents</h3>
+<p>Minimum layout (matches the working PDAC repo):</p>
+<pre><code>aim-inference-worker-&lt;name&gt;/
+├── azure-pipelines.yml
+├── Dockerfile
+├── README.md
+├── requirements.txt
+├── models/
+│   └── &lt;name&gt;_model.py      # BaseAIModel implementation
+└── module/                  # optional native / vendor code</code></pre>
+
+<h4>Dockerfile (copy and edit)</h4>
+<pre><code>ARG BASE_IMAGE=aimlabacr.azurecr.io/aimlab/aim-inference-worker-base:main
+FROM ${BASE_IMAGE}
+USER root
+COPY requirements.txt /tmp/model.txt
+RUN pip install -r /tmp/model.txt
+COPY models/ /app/models/
+COPY module/ /app/module/
+USER 10001
+ENV MODEL_NAME=&lt;name&gt; HF_HOME=/tmp/hf</code></pre>
+
+<div class="note">
+  <strong>Weights stay on the host.</strong>
+  Put checkpoints under <code>/data/models</code> on the k3s node (already mounted read-only into workers).
+  Do not commit multi-gigabyte weights into GitHub.
+</div>
+
+<h4>azure-pipelines.yml (copy and edit)</h4>
+<pre><code># Build this model worker FROM the shared base image and push to ACR.
+trigger:
+  batch: true
+  branches:
+    include:
+      - main
+pr: none
+
+variables:
+  ACR_NAME: aimlabacr
+  REGISTRY: aimlabacr.azurecr.io/aimlab
+  IMAGE_NAME: aim-inference-worker-&lt;name&gt;
+  azureSubscription: aim-inference-acr
+  BASE_IMAGE: aimlabacr.azurecr.io/aimlab/aim-inference-worker-base:main
+
+pool:
+  name: k3s-host
+
+steps:
+  - checkout: self
+    submodules: recursive   # set false if you have no submodules
+    fetchDepth: 1
+
+  - task: AzureCLI@2
+    displayName: az acr login + docker build/push
+    inputs:
+      azureSubscription: $(azureSubscription)
+      scriptType: bash
+      scriptLocation: inlineScript
+      inlineScript: |
+        set -euo pipefail
+        SHORT_SHA="$(echo '$(Build.SourceVersion)' | cut -c1-12)"
+        # CRITICAL: DOCKER_CONFIG before az acr login
+        DOCKER_CONFIG="${AGENT_TEMPDIRECTORY}/docker-config"
+        mkdir -p "$DOCKER_CONFIG"
+        export DOCKER_CONFIG
+        az acr login --name "$(ACR_NAME)"
+        IMAGE="$(REGISTRY)/$(IMAGE_NAME):${SHORT_SHA}"
+        MAIN="$(REGISTRY)/$(IMAGE_NAME):main"
+        docker build -t "$IMAGE" --build-arg BASE_IMAGE="$(BASE_IMAGE)" .
+        docker tag "$IMAGE" "$MAIN"
+        docker push "$IMAGE"
+        docker push "$MAIN"
+        echo "Pushed $IMAGE and $MAIN"</code></pre>
+
+<div class="danger">
+  <strong>If <code>DOCKER_CONFIG</code> is set after <code>az acr login</code>, the push fails with “authentication required”.</strong>
+  The login writes credentials into whatever <code>DOCKER_CONFIG</code> is at that moment;
+  Docker later reads a different empty config. Always mkdir + export first.
+</div>
+
+<p>Commit and push:</p>
+<pre><code>git add -A
+git commit -m "Initial &lt;name&gt; worker from template"
+git push -u origin main</code></pre>
+
+<h3>Step C — Create the Azure Pipeline (UI — preferred)</h3>
+<p>
+  Creating the pipeline <strong>from the browser against the GitHub repo</strong> is the
+  reliable way to get the webhook installed automatically.
+</p>
+
+<ol>
+  <li>Open <a href="https://dev.azure.com/aimlabdev/cpathportal/_build">Pipelines</a> → <strong>New pipeline</strong>.</li>
+  <li>Where is your code? → <strong>GitHub</strong>.</li>
+  <li>Pick connection <code>github-extract-areas</code> (or authorize again if prompted).</li>
+  <li>Select <code>pouya-codes/aim-inference-worker-&lt;name&gt;</code>.</li>
+  <li>Configure → <strong>Existing Azure Pipelines YAML file</strong> → path <code>/azure-pipelines.yml</code>, branch <code>main</code>.</li>
+  <li>Rename the pipeline to <code>worker-&lt;name&gt;</code> (⋯ → Rename / pipeline settings).</li>
+  <li>Confirm the default agent pool is <code>k3s-host</code> (the YAML <code>pool:</code> block should already set this).</li>
+  <li>Run once. On first run, Azure DevOps may ask you to <strong>Permit</strong> the
+      <code>aim-inference-acr</code> service connection — click Permit / Authorize.</li>
+</ol>
+
+<h3>Step C′ — Create the pipeline (CLI — optional)</h3>
+<pre><code>az pipelines create \
+  --org https://dev.azure.com/aimlabdev \
+  --project cpathportal \
+  --name worker-&lt;name&gt; \
+  --repository pouya-codes/aim-inference-worker-&lt;name&gt; \
+  --repository-type github \
+  --branch main \
+  --yml-path azure-pipelines.yml \
+  --skip-first-run false \
+  --service-connection github-extract-areas \
+  -o table</code></pre>
+
+<div class="warn">
+  <strong>If the CLI says</strong>
+  <code>Could not create service hooks subscription. The repository does not reference a service connection.</code>
+  use the UI path above, or follow <a href="#webhook">§6</a> to force the webhook after creation.
+</div>
+
+<h3>Step D — Confirm the webhook exists</h3>
+<ol>
+  <li>GitHub → <code>aim-inference-worker-&lt;name&gt;</code> → <strong>Settings → Webhooks</strong>.</li>
+  <li>You must see a hook whose Payload URL starts with
+      <code>https://dev.azure.com/aimlabdev/_apis/public/hooks/externalEvents</code>.</li>
+  <li>Events: <strong>Pushes</strong> (CI). No Pull requests needed.</li>
+  <li>If the list is empty, the pipeline will only run when you click Queue — go to §6.</li>
+</ol>
+
+<!-- ============================================================ -->
+<h2 id="webhook">6. Webhooks and CI triggers (the common failure)</h2>
+
+<p>
+  Azure DevOps installs the GitHub webhook when a pipeline is
+  <strong>created from GitHub</strong> or when a <strong>YAML CI trigger is saved</strong>
+  on a GitHub-backed definition. A raw REST PATCH that only changes
+  <code>repository.url</code> does <em>not</em> create the hook — that is why the
+  <code>aim-inference-worker-*</code> repos had empty Webhooks pages until they were repaired.
+</p>
+
+<h3>Repair from the Azure DevOps UI</h3>
+<ol>
+  <li>Pipelines → <code>worker-&lt;name&gt;</code> → <strong>Edit</strong>.</li>
+  <li>Open the <strong>Triggers</strong> menu (⋯ or the Triggers tab).</li>
+  <li>Ensure <strong>Override the YAML continuous integration trigger</strong> is <em>off</em>
+      (so the YAML <code>trigger:</code> block is used).</li>
+  <li>Save. Saving often (re)installs the GitHub webhook.</li>
+  <li>Refresh GitHub → Settings → Webhooks and confirm the hook appeared.</li>
+</ol>
+
+<h3>Repair from the API (what we used)</h3>
+<p>
+  PUT the build definition with a YAML-sourced CI trigger
+  (<code>settingsSourceType: 2</code>) and <code>repository.properties.manageWebhook: "true"</code>.
+  That made Azure DevOps create one push webhook per repo.
+</p>
+<pre><code># Example sketch — replace DEFINITION_ID and REPO
+# 1) GET definition → /tmp/def.json
+# 2) set triggers to YAML CI + manageWebhook true
+# 3) PUT definition back
+
+az devops invoke \
+  --org https://dev.azure.com/aimlabdev \
+  --area build --resource definitions \
+  --route-parameters project=cpathportal definitionId=DEFINITION_ID \
+  --http-method GET --api-version 7.1 -o json &gt; /tmp/def.json
+
+# edit /tmp/def.json then:
+az devops invoke \
+  --org https://dev.azure.com/aimlabdev \
+  --area build --resource definitions \
+  --route-parameters project=cpathportal definitionId=DEFINITION_ID \
+  --query-parameters definitionId=DEFINITION_ID \
+  --http-method PUT --api-version 7.1 \
+  --in-file /tmp/def-put.json -o json</code></pre>
+
+<p>Confirm Azure DevOps sees the hook:</p>
+<pre><code>EP=85897963-fd50-40ca-8838-e25a362675c5   # id of github-extract-areas
+az devops invoke --org https://dev.azure.com/aimlabdev \
+  --area build --resource webhooks \
+  --route-parameters project=cpathportal providerName=github \
+  --query-parameters serviceEndpointId=$EP \
+    repository=pouya-codes/aim-inference-worker-&lt;name&gt; \
+  --http-method GET --api-version 7.1 -o json</code></pre>
+<p>Expected: <code>count: 1</code> and a <code>url</code> under <code>dev.azure.com/.../externalEvents</code>.</p>
+
+<!-- ============================================================ -->
+<h2 id="k8s">7. Wire the new image into k3s / Argo CD</h2>
+
+<p>
+  A green pipeline only publishes an image. The cluster still needs a Deployment,
+  a KEDA ScaledObject, and overlay image tags.
+</p>
+
+<h3>7.1 Scaffold platform manifests</h3>
+<pre><code>cd ~/code/extract_areas
+python scripts/new_model.py &lt;name&gt; --min 0
+# or: make new-model</code></pre>
+<p>This adds roughly:</p>
+<ul>
+  <li><code>deploy/k8s/base/workers/worker-&lt;name&gt;.yaml</code> — Deployment + ScaledObject on
+      stream <code>inference:tasks:&lt;name&gt;</code></li>
+  <li>an entry in <code>deploy/k8s/base/kustomization.yaml</code></li>
+  <li>a local Dockerfile stage (optional; CI still builds from the model repo)</li>
+</ul>
+
+<h3>7.2 Edit the k3s-local overlay</h3>
+<p>In <code>deploy/k8s/overlays/k3s-local/kustomization.yaml</code>:</p>
+<ol>
+  <li>Add under <code>images:</code>:
+<pre><code>- name: aimlab/aim-inference-worker-&lt;name&gt;
+  newName: aimlabacr.azurecr.io/aimlab/aim-inference-worker-&lt;name&gt;
+  newTag: main</code></pre>
+  </li>
+  <li>Include the model label in the patch that adds <code>imagePullSecrets: acr-pull</code>
+      and <code>imagePullPolicy: Always</code>
+      (selector today: <code>aim.inference/model in (pdac, hovernet, ec_cancer, deepliif, …)</code>).</li>
+</ol>
+
+<h3>7.3 Image Updater annotations (optional today)</h3>
+<p>
+  In <code>deploy/k8s/argocd/application.yaml</code>, extend
+  <code>argocd-image-updater.argoproj.io/image-list</code>. Note: Image Updater v0.17.0
+  currently skips this app on Argo CD 3.x (<code>status.sourceType</code> empty).
+  Pods still get new builds because of <code>imagePullPolicy: Always</code> on <code>:main</code>.
+</p>
+
+<h3>7.4 Weights + secrets</h3>
+<ul>
+  <li>Copy model weights to <code>/data/models/…</code> on this host.</li>
+  <li>If the model needs Hugging Face downloads, ensure <code>HF_TOKEN</code> is in
+      <code>inference-secrets</code> (re-run <code>overlays/k3s-local/create-secret.sh</code> from
+      <code>deploy/compose.env</code> — never commit that file).</li>
+</ul>
+
+<h3>7.5 Push platform branch and sync</h3>
+<pre><code>cd ~/code/extract_areas
+git checkout aimviwer2-AI
+git add deploy/k8s scripts docker   # whatever new_model.py touched
+git commit -m "Add worker-&lt;name&gt; Deployment and ACR image wiring"
+git push origin aimviwer2-AI
+
+# Argo CD sync is manual today
+# UI: Applications → aim-inference → Sync
+# or, if argocd CLI is configured:
+# argocd app sync aim-inference</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="verify">8. Verify end to end</h2>
+
+<ol>
+  <li><strong>Webhook delivery</strong> — push a tiny README tweak to the model repo.
+<pre><code>git commit --allow-empty -m "ci: ping"
+git push origin main</code></pre>
+      GitHub → Webhooks → Recent Deliveries → expect HTTP 200.</li>
+  <li><strong>Pipeline</strong> — <a href="https://dev.azure.com/aimlabdev/cpathportal/_build">ADO builds</a>
+      should show a new run of <code>worker-&lt;name&gt;</code> without you clicking Queue. Green = image in ACR.</li>
+  <li><strong>ACR tags</strong>
+<pre><code>az acr repository show-tags -n aimlabacr \
+  --repository aimlab/aim-inference-worker-&lt;name&gt; -o table</code></pre>
+      You should see <code>main</code> and a 12-character sha.</li>
+  <li><strong>Cluster</strong>
+<pre><code>kubectl -n aim-inference get deploy,scaledobject | grep &lt;name&gt;
+kubectl -n aim-inference get deploy worker-&lt;name&gt; \
+  -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}{.spec.template.spec.containers[0].imagePullPolicy}{"\n"}'</code></pre>
+      Expect <code>…/aim-inference-worker-&lt;name&gt;:main</code> and <code>Always</code>.</li>
+  <li><strong>Force a pull of the new build</strong> (if a pod was already running):
+<pre><code>kubectl -n aim-inference rollout restart deploy/worker-&lt;name&gt;</code></pre>
+  </li>
+  <li><strong>Gateway catalogue</strong>
+<pre><code>curl -s -H "Authorization: Bearer $GATEWAY_API_TOKEN" \
+  http://127.0.0.1:30080/v1/models | jq</code></pre>
+  </li>
+  <li><strong>Portal</strong> — grant the model to the user group in Access grants, then start a
+      single-slide or Batch AI job and watch KEDA scale the worker from 0 → 1.</li>
+</ol>
+
+<!-- ============================================================ -->
+<h2 id="day2">9. Day-2 operations</h2>
+
+<table>
+  <thead><tr><th>Change</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Model code / requirements</td>
+      <td>Push <code>main</code> in the model repo → pipeline → ACR. Next scale-up or <code>rollout restart</code>.</td>
+    </tr>
+    <tr>
+      <td>Shared worker runtime</td>
+      <td>Push <code>extract_areas</code> → <code>worker-base</code> pipeline → then rebuild every model pipeline.</td>
+    </tr>
+    <tr>
+      <td>CPU / env / scaling</td>
+      <td>Edit manifests under <code>deploy/k8s/</code>, push <code>aimviwer2-AI</code>, Sync Argo CD.</td>
+    </tr>
+    <tr>
+      <td>Roll back a bad model build</td>
+      <td>List ACR tags; set <code>newTag: &lt;old-sha&gt;</code> in the overlay; push + sync.</td>
+    </tr>
+    <tr>
+      <td>Gateway / tissue-api</td>
+      <td>Still local <code>:dev</code> images. <code>make images &amp;&amp; make k8s-import-images</code>, then restart those Deployments.</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="troubleshoot">10. Troubleshooting</h2>
+
+<table>
+  <thead><tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Push to GitHub, no pipeline run</td>
+      <td>No webhook, or UI override disabled YAML triggers</td>
+      <td>§6 — confirm hook on GitHub; turn off “Override YAML CI trigger”; save</td>
+    </tr>
+    <tr>
+      <td><code>fatal: Authentication failed</code> for <code>dev.azure.com/.../_git/…</code></td>
+      <td>Pipeline still points at an ADO mirror repo</td>
+      <td>Edit pipeline → Get sources → GitHub repo via <code>github-extract-areas</code></td>
+    </tr>
+    <tr>
+      <td><code>permission denied</code> on <code>docker.sock</code></td>
+      <td>Agent not in <code>docker</code> group</td>
+      <td><code>sg docker -c './bin/Agent.Listener …'</code> or fix the systemd unit</td>
+    </tr>
+    <tr>
+      <td>ACR push: authentication required</td>
+      <td><code>DOCKER_CONFIG</code> set after <code>az acr login</code></td>
+      <td>Reorder YAML: mkdir/export <code>DOCKER_CONFIG</code>, then login, then push</td>
+    </tr>
+    <tr>
+      <td>Build asks for empty submodule / SSH to GitHub</td>
+      <td><code>submodules: recursive</code> but submodule is SSH-only or empty</td>
+      <td>Use <code>submodules: false</code>, or fix submodule URLs to HTTPS with a token</td>
+    </tr>
+    <tr>
+      <td>Pipeline green, cluster still runs old code</td>
+      <td>Cached <code>:main</code> with <code>IfNotPresent</code>, or no restart</td>
+      <td>Ensure overlay sets <code>imagePullPolicy: Always</code>; <code>rollout restart</code></td>
+    </tr>
+    <tr>
+      <td>Pod <code>ImagePullBackOff</code></td>
+      <td>Missing <code>acr-pull</code> secret or wrong image name</td>
+      <td>Re-run <code>create-acr-pull-secret.sh</code>; check overlay <code>images:</code> block</td>
+    </tr>
+    <tr>
+      <td>Webhook 200 but no build</td>
+      <td>Branch filter (only <code>main</code>) or path filters</td>
+      <td>Push to <code>main</code>; for <code>worker-base</code> also touch a watched path</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="checklist">11. Printable checklist — new model repo</h2>
+
+<ul class="checklist">
+  <li>Create private GitHub repo from <code>aim-inference-worker-template</code></li>
+  <li>Grant <code>github-extract-areas</code> (OAuth/App) admin access to the new repo</li>
+  <li>Implement <code>models/&lt;name&gt;_model.py</code> + <code>requirements.txt</code></li>
+  <li>Set <code>MODEL_NAME</code> / <code>IMAGE_NAME</code> in Dockerfile and <code>azure-pipelines.yml</code></li>
+  <li>Keep <code>pr: none</code>; <code>DOCKER_CONFIG</code> before <code>az acr login</code></li>
+  <li>Push <code>main</code></li>
+  <li>New Azure Pipeline from GitHub YAML → name <code>worker-&lt;name&gt;</code> → pool <code>k3s-host</code></li>
+  <li>Authorize <code>aim-inference-acr</code> on first run</li>
+  <li>Confirm GitHub webhook exists (push → ADO)</li>
+  <li>First build green; ACR has <code>:main</code> and <code>:&lt;sha&gt;</code></li>
+  <li><code>python scripts/new_model.py &lt;name&gt;</code> in <code>extract_areas</code></li>
+  <li>Overlay: ACR image + <code>acr-pull</code> + <code>Always</code></li>
+  <li>Weights under <code>/data/models</code></li>
+  <li>Push <code>aimviwer2-AI</code> and Sync Argo CD app <code>aim-inference</code></li>
+  <li>Smoke-test via gateway / portal; watch KEDA scale the worker</li>
+</ul>
+
+<footer>
+  Saved at <code>docs/CI_CD_SETUP_TUTORIAL.html</code> in
+  <code>pouya-codes/extract_areas</code>. Reflects the live setup on host
+  <code>ai-cpathportal</code> (k3s, 4× Tesla T4, Azure DevOps project
+  <code>cpathportal</code>) as of November 2026.
+  Companion overview: <a href="CPATHPORTAL_PLATFORM.md">CPATHPORTAL_PLATFORM.md</a>.
+</footer>
+
+</div>
+</body>
+</html>
