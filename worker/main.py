@@ -37,6 +37,7 @@ from typing import Any, Optional
 from inference_platform import metrics
 from inference_platform.broker import Message, TaskBroker, default_consumer_name
 from inference_platform.contracts import TaskStatus
+from inference_platform.gpu import apply_memory_budget
 from inference_platform.logging_setup import configure_logging
 from inference_platform.overlays import build_overlay_store
 from inference_platform.registry import ModelRegistry
@@ -384,6 +385,8 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     settings = Settings.from_env()
     configure_logging(f"worker-{settings.model_name or 'unset'}")
+    # Before the model loads: this process's share of a time-sliced GPU.
+    apply_memory_budget()
     worker = Worker(settings, serve_http=not args.no_http)
 
     if args.describe:

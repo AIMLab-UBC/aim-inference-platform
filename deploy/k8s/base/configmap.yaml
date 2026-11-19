@@ -20,3 +20,12 @@ data:
   TASK_MAX_ATTEMPTS: "2"
   MAX_ACTIVE_JOBS_PER_OWNER: "20"
   MAX_REGIONS_PER_JOB: "500"
+  # GPU memory budget per process. The device plugin time-slices each GPU
+  # into 2 units (addons/nvidia-device-plugin.yaml) and does not divide its
+  # memory, so every GPU pod caps itself at a little under half the card; the
+  # rest covers the CUDA contexts. Change it with the replicas there
+  # (replicas: 1 -> 0.95). See inference_platform/gpu.py.
+  GPU_MEMORY_FRACTION: "0.45"
+  # Lets PyTorch grow and shrink allocations in place instead of keeping
+  # fragmented blocks, so a process uses closer to what it really needs.
+  PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True

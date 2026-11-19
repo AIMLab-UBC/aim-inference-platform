@@ -129,10 +129,16 @@ requests `nvidia.com/gpu: 1`.
 
 **GPU time-slicing.** The NVIDIA device plugin advertises each physical T4
 as two `nvidia.com/gpu` slots, so the host offers 8 slots. Two pods can
-share one card; memory is not partitioned, so the workers' automatic batch
-sizing is what keeps a shared card within its 16 GB. On a cluster with
-larger or more cards, set `replicas: 1` in the device plugin ConfigMap for
-exclusive GPUs.
+share one card, but the plugin does not divide its memory. Each GPU process
+therefore caps itself at `GPU_MEMORY_FRACTION` of the card (0.45, set in the
+`inference-env` ConfigMap and applied by `inference_platform/gpu.py` before
+the model loads), so a neighbour can never take a slot's memory, and every
+model has to run within that budget. Automatic batch sizing must not be
+relied on to share a card: it fills whatever is free when it probes, which a
+neighbour can take back later (2026-11-19: PDAC workers placed next to the
+SAM3 tissue API failed with "CUDA out of memory"). Models use fixed batch
+sizes measured to fit the budget. On a cluster with larger or more cards, set
+`replicas: 1` in the device plugin ConfigMap and `GPU_MEMORY_FRACTION` to 0.95.
 
 **Scale to zero.** Every model worker idles at zero replicas, so an idle
 model holds no GPU memory. After its queue empties, a pool stays up for its

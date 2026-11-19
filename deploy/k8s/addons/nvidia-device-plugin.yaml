@@ -1,7 +1,9 @@
 # NVIDIA device plugin with time-slicing: each physical GPU is advertised as
-# two schedulable nvidia.com/gpu units, so a light model and a heavy one can
-# share a T4 (memory is NOT partitioned; the workers' auto batch sizing keeps
-# them inside what is free). Set replicas: 1 for exclusive GPUs.
+# two schedulable nvidia.com/gpu units, so two models can share a T4.
+# Memory is NOT partitioned by the plugin: every GPU pod caps itself with
+# GPU_MEMORY_FRACTION (base/configmap.yaml, 0.45 = a little under half a card),
+# and every model must run within that budget. Change both together; for
+# exclusive GPUs set replicas: 1 and GPU_MEMORY_FRACTION to 0.95.
 apiVersion: v1
 kind: ConfigMap
 metadata:

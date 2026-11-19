@@ -10,7 +10,7 @@
     "sam2_model_path": "/models/sam2/sam2.1_hiera_large.pt",
     "sam2_config_path": "/models/sam2/sam2.1_hiera_l.yaml",
     "sam3_model_id": "facebook/sam3",
-    "sam3_points_per_batch": 64,
+    "sam3_points_per_batch": 16,
     "sam3_crop_overlap_ratio": 0.4
   },
   "pools": {"general": {"gpus": [0], "base_port": 8000}},
