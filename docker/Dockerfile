@@ -139,6 +139,8 @@ ENV MODEL_NAME=deepliif
 
 # --------------------------------------------------------------------------- #
 # tissue-api  (slide-mask / tissue-region helpers: SAM3, no region models)
+# The deployed image is built by the aim-inference-tissue-api repo's pipeline;
+# this stage is kept for offline monorepo and Docker Compose builds.
 # --------------------------------------------------------------------------- #
 FROM base AS tissue-api
 COPY worker/requirements/tissue.txt /tmp/model.txt

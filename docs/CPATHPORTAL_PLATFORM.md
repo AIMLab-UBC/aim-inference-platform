@@ -150,7 +150,7 @@ this host.
 | Namespace | Component | Image | Notes |
 |---|---|---|---|
 | `aim-inference` | `inference-gateway` | `aimlab/aim-inference-gateway:dev` (local) | FastAPI. One replica, NodePort 30080. Job API, model catalogue, overlays, `GET /v1/jobs/{id}/report.pdf`. |
-| | `tissue-api` | `aimlab/aim-inference-tissue-api:dev` (local) | SAM3 mask and tissue-region helpers. One GPU, NodePort 30800. Called synchronously by Django. |
+| | `tissue-api` | `aimlabacr.azurecr.io/aimlab/aim-inference-tissue-api:main` | SAM3 mask and tissue-region helpers. One GPU, NodePort 30800. Called synchronously by Django. Its pipeline restarts it after each build. |
 | | `redis` | `redis:7.4-alpine` | Job store and one stream per model (`inference:tasks:<model>`), with AOF persistence. |
 | | `worker-pdac`, `worker-hovernet`, `worker-ec-cancer`, `worker-deepliif` | `aimlabacr.azurecr.io/aimlab/aim-inference-worker-<model>:main` | One GPU each. KEDA scales each from 0 to 4 replicas (4 GPUs on the host). Pulled with the `acr-pull` secret, `imagePullPolicy: Always`. |
 | `keda` | KEDA operator, metrics API server, admission webhooks | | `redis-streams` ScaledObject per worker: stream-length mode, 10 s polling, 900 s cooldown. |
@@ -185,11 +185,12 @@ committed.
 
 | Repository (GitHub, private) | Contains | Image |
 |---|---|---|
-| `pouya-codes/extract_areas` | Gateway, worker runtime (`worker/`, `inference_platform/`), tissue-api, k8s manifests, Argo CD app | `aim-inference-worker-base` (CI); gateway and tissue-api are built locally |
+| `pouya-codes/extract_areas` | Gateway, worker runtime (`worker/`, `inference_platform/`), k8s manifests, Argo CD app | `aim-inference-worker-base` (CI); the gateway is built locally |
 | `pouya-codes/aim-inference-worker-pdac` | PDAC model code, `requirements.txt`, `Dockerfile` | `aim-inference-worker-pdac` |
 | `pouya-codes/aim-inference-worker-hovernet` | HoVer-Net | `aim-inference-worker-hovernet` |
 | `pouya-codes/aim-inference-worker-ec` | EC cancer | `aim-inference-worker-ec` |
 | `pouya-codes/aim-inference-worker-deepliif` | DeepLIIF | `aim-inference-worker-deepliif` |
+| `pouya-codes/aim-inference-tissue-api` | SAM3 tissue detector: `app_refactored.py`, `mask_generator.py`, `config.json` | `aim-inference-tissue-api` |
 | `pouya-codes/aim-inference-worker-template` | Template repo for new models | none |
 
 Every model Dockerfile starts `FROM aimlabacr.azurecr.io/aimlab/aim-inference-worker-base:main`
@@ -211,6 +212,7 @@ so a model repo never copies platform code.
 |---|---|---|---|
 | `worker-base` (id 1; `bootstrap.sh` created it as `model-workers`) | `extract_areas` / `azure-pipelines.yml` | push to `main` / `aimviwer2-AI` | `aim-inference-worker-base:<sha>` and `:main` |
 | `worker-pdac`, `worker-hovernet`, `worker-ec`, `worker-deepliif` (ids 3–6) | the model repo / `azure-pipelines.yml` | push to `main` | `aim-inference-worker-<model>:<sha>` and `:main` |
+| `tissue-api` | `aim-inference-tissue-api` / `azure-pipelines.yml` | push to `main`, or a finished `worker-base` run | `aim-inference-tissue-api:<sha>-<build id>` and `:main`, then restarts `deploy/tissue-api`, checks `/health`, and rolls back to the previous `:main` digest on failure |
 
 Each pipeline step is one `AzureCLI@2` task on the host agent. It sets a
 private `DOCKER_CONFIG` *before* `az acr login`, so the login and the push use
@@ -248,9 +250,15 @@ In practice:
    Deployment): commit under `deploy/k8s/` on `aimviwer2-AI` and push. Argo CD
    shows the app OutOfSync; sync it from the UI or with `argocd app sync
    aim-inference`. Sync is manual on purpose for now (see section 7).
-4. **Gateway or tissue-api:** not in CI. Build with `make images`, load into
-   k3s with `make k8s-import-images`, then restart the deployment.
-5. **Roll back a model:** list tags with
+4. **Tissue API:** push to `main` in `aim-inference-tissue-api`. Pipeline
+   `tissue-api` builds, pushes, restarts `deploy/tissue-api` (the new pod
+   starts before the old one stops) and checks `/health`. If the rollout or
+   the check fails, it points `:main` back at the previous digest and undoes
+   the rollout. It also rebuilds after every `worker-base` build, because the
+   tissue API imports code from the base image.
+5. **Gateway:** not in CI. Build with `make images`, load into k3s with
+   `make k8s-import-images`, then restart the deployment.
+6. **Roll back a model:** list tags with
    `az acr repository show-tags -n aimlabacr --repository aimlab/aim-inference-worker-pdac -o table`.
    Set `newTag: <sha>` for that image in `overlays/k3s-local/kustomization.yaml`,
    then push and sync.
@@ -326,7 +334,7 @@ cd /home/ubuntu/azdo-agent && sg docker -c './bin/Agent.Listener run --startupty
 | Azure DevOps agent runs as a background process, not a systemd service | CI stops after a reboot until the agent is started by hand | `cd ~/azdo-agent && sudo ./svc.sh install ubuntu && sudo ./svc.sh start`, after making sure `ubuntu` is in the `docker` group for the service. |
 | Image Updater skips `aim-inference` | Digests are not written back, so the Application does not record which build is running | Upgrade Image Updater to the 1.x line (CRD-based, supports Argo CD 3.x), or use `write-back-method: git` against the overlay. |
 | Argo CD sync is manual | Manifest changes need a manual sync | When the branch is stable, add `syncPolicy.automated: {prune: true, selfHeal: true}` to `application.yaml`. |
-| Gateway and tissue-api use local `:dev` images | Not reproducible from CI | Add both to the `worker-base` pipeline (or their own pipelines) and point the overlay at ACR. |
+| The gateway uses a local `:dev` image | Not reproducible from CI | Give it its own pipeline like `tissue-api` and point the overlay at ACR. |
 | Leftover Azure DevOps objects from the migration | Clutter | Delete the `seed-github-model-repos` pipeline (id 2), the `model-repo-bootstrap` repo, and the old `aim-inference-worker-*` mirror repos in ADO. |
 | A GitHub PAT was pasted into a terminal during setup | Credential exposure | Revoke it on GitHub and create a fine-grained token if one is needed again. |
 | Cluster manifests track `aimviwer2-AI`, not `main` | Two long-lived branches | Merge to `main` and repoint `targetRevision`. |

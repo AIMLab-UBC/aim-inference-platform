@@ -18,7 +18,7 @@ Kustomize layout:
 ```bash
 make images                                   # build images with Docker
 make k8s-addons                               # KEDA + device plugin (once; cluster-admin)
-make k8s-import-images                        # docker save | k3s ctr images import (gateway/tissue only once ACR owns workers)
+make k8s-import-images                        # docker save | k3s ctr images import (only the gateway needs this now)
 deploy/k8s/overlays/k3s-local/create-secret.sh  # namespace + Secret from deploy/compose.env (kustomize never manages the Secret)
 deploy/k8s/overlays/k3s-local/create-acr-pull-secret.sh  # ACR pull secret for workers
 make k8s-apply-local                          # kubectl apply -k overlays/k3s-local
@@ -110,7 +110,9 @@ flowchart LR
 
 Workers run `image: …/aim-inference-worker-<model>:main` with `acr-pull` and `imagePullPolicy: Always` (k3s-local overlay). Rebuilding one model repo updates only that ACR image; the next scale-up from zero (or `kubectl -n aim-inference rollout restart deploy/worker-<model>`) runs the new build. Image Updater annotations remain on the Application for digest write-back, but the updater currently skips the app because Argo CD 3.x leaves `status.sourceType` empty (`spec.source.kustomize: {}` did not help).
 
-Gateway and tissue-api stay on local `aimlab/…:dev` tags (not in these pipelines).
+**Tissue API:** its own repo, `pouya-codes/aim-inference-tissue-api`, and pipeline **`tissue-api`**. It pushes `…/aim-inference-tissue-api:<sha>-<build id>` and `:main`, then restarts `deploy/tissue-api` (maxSurge 1, so the old pod serves until the new one is Ready), checks `/health`, and on failure re-points `:main` at the previous digest and runs `kubectl rollout undo`. A finished `worker-base` run also triggers it.
+
+The gateway stays on the local `aimlab/aim-inference-gateway:dev` tag (not in these pipelines).
 
 **New model:** use GitHub/ADO template repo `aim-inference-worker-template` (or `scripts/seed_model_repos.sh`), then add `deploy/k8s/base/workers/worker-<name>.yaml` + Image Updater annotations in **this** platform repo. `scripts/new_model.py` still scaffolds the platform Deployment/config side.
 

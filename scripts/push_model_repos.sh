@@ -7,6 +7,10 @@
 # and pipelines worker-* already point at those.
 #
 #   GITHUB_TOKEN=ghp_... scripts/push_model_repos.sh [/path/to/seeded]
+#
+# Push only some repos (each one a directory under the seeded path):
+#
+#   GITHUB_TOKEN=ghp_... REPOS=aim-inference-tissue-api scripts/push_model_repos.sh
 set -euo pipefail
 
 OUT="${1:-${HOME}/code/aim-inference-workers}"
@@ -55,15 +59,20 @@ push_repo() {
   git -C "$dir" push "https://x-access-token:${GITHUB_TOKEN}@github.com/${ORG}/${repo}.git" HEAD:main
 }
 
-for name in pdac hovernet ec deepliif; do
-  repo="aim-inference-worker-${name}"
+# aim-inference-tissue-api is the SAM3 tissue service (not a queue worker);
+# it is not seeded by seed_model_repos.sh, its own repo is the source of truth.
+DEFAULT_REPOS="aim-inference-worker-pdac aim-inference-worker-hovernet aim-inference-worker-ec
+aim-inference-worker-deepliif aim-inference-tissue-api aim-inference-worker-template"
+
+for repo in ${REPOS:-$DEFAULT_REPOS}; do
+  [[ -d "${OUT}/${repo}/.git" ]] || { echo "no git repo at ${OUT}/${repo}" >&2; exit 1; }
   echo "==> ${repo}"
-  create_repo "$repo" false
+  if [[ "$repo" == aim-inference-worker-template ]]; then
+    create_repo "$repo" true
+  else
+    create_repo "$repo" false
+  fi
   push_repo "$repo"
 done
-
-echo "==> aim-inference-worker-template"
-create_repo aim-inference-worker-template true
-push_repo aim-inference-worker-template
 
 echo "done"
