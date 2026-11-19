@@ -46,7 +46,10 @@ flowchart LR
    - Resource group `rg-aim-inference` (eastus2)
    - ACR `aimlabacr` → `aimlabacr.azurecr.io`
    - AcrPush service principal → `~/.config/aimlabacr-push-sp.json`
-   - ACR pull token → `~/.config/aimlabacr-k3s-pull.{username,password}`
+   - ACR pull token → `~/.config/aimlabacr-k3s-pull.{username,password}`. Its scope map
+     `k3s-pull-scope-map` lists each repository it may read. **Add every new image
+     repository to it**, or pods fail with `insufficient_scope: authorization failed`:
+     `az acr scope-map update -r aimlabacr -n k3s-pull-scope-map --add-repository aimlab/<repo> content/read`
 
 2. **Azure DevOps organization** (browser, once): this host uses **`aimlabdev`** (`https://dev.azure.com/aimlabdev`) and project **`cpathportal`**.
 
