@@ -5,13 +5,15 @@
 #   scripts/repoint_ado_pipelines.sh <service-connection-name> [--apply]
 #
 # Without --apply it only prints what would change. Defaults: FROM=pouya-codes,
-# TO=AIMLab-UBC (override with FROM= / TO= in the environment).
+# TO=AIMLab-UBC, RENAMES="extract_areas=aim-inference-platform" (space-separated
+# old=new repo names; override any of them in the environment).
 set -euo pipefail
 
 CONN_NAME="${1:?usage: $0 <service-connection-name> [--apply]}"
 APPLY="${2:-}"
 FROM="${FROM:-pouya-codes}"
 TO="${TO:-AIMLab-UBC}"
+RENAMES="${RENAMES-extract_areas=aim-inference-platform}"
 PROJECT="${ADO_PROJECT:-cpathportal}"
 PIPELINES=(worker-base worker-pdac worker-hovernet worker-ec worker-deepliif tissue-api)
 
@@ -29,13 +31,24 @@ for name in "${PIPELINES[@]}"; do
     --route-parameters project="$PROJECT" definitionId="$id" \
     --api-version 7.1 -o json >"$work/$name.json" 2>/dev/null
 
-  FROM="$FROM" TO="$TO" CONN_ID="$CONN_ID" python3 - "$work/$name.json" <<'PY'
+  FROM="$FROM" TO="$TO" RENAMES="$RENAMES" CONN_ID="$CONN_ID" python3 - "$work/$name.json" <<'PY'
 import json, os, sys
 path = sys.argv[1]
 d = json.load(open(path))
 src, dst, conn = os.environ["FROM"], os.environ["TO"], os.environ["CONN_ID"]
 r = d["repository"]
-swap = lambda s: s.replace(f"/{src}/", f"/{dst}/").replace(f"{src}/", f"{dst}/", 1) if isinstance(s, str) else s
+renames = [pair.split("=", 1) for pair in os.environ.get("RENAMES", "").split()]
+
+def swap(s):
+    if not isinstance(s, str):
+        return s
+    s = s.replace(f"/{src}/", f"/{dst}/").replace(f"{src}/", f"{dst}/", 1)
+    for old, new in renames:
+        for tail in (".git", "/", ""):
+            if f"{dst}/{old}{tail}" in s and (tail or s.endswith(f"{dst}/{old}")):
+                s = s.replace(f"{dst}/{old}{tail}", f"{dst}/{new}{tail}")
+                break
+    return s
 before = r["name"]
 for k in ("id", "name", "url"):
     r[k] = swap(r[k])

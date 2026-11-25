@@ -61,7 +61,7 @@ flowchart LR
    # ADO_PROJECT defaults to cpathportal
    ```
 
-4. **GitHub service connection**: in project `cpathportal`, add a GitHub connection named `github-aimlab-ubc` that can read `AIMLab-UBC/extract_areas` (needed before the pipeline create step).
+4. **GitHub service connection**: in project `cpathportal`, add a GitHub connection named `github-aimlab-ubc` that can read `AIMLab-UBC/aim-inference-platform` (needed before the pipeline create step).
 
 5. **Project, pool, ARM connection, pipeline, agent**:
 
@@ -76,10 +76,10 @@ flowchart LR
    deploy/k8s/argocd/install.sh
    ```
 
-7. **Push branch `aimviwer2-AI`** (Argo tracks it; the CI/CD commit is local until pushed). This host has no GitHub credentials configured for `git push` yet:
+7. **Push branch `main`** (Argo tracks it):
 
    ```bash
-   git push -u origin aimviwer2-AI
+   git push -u origin main
    ```
 
    Then enable auto-sync:
@@ -101,7 +101,7 @@ flowchart LR
 
 ### Day-2 flow
 
-**Platform (`extract_areas`):** push to `aimviwer2-AI` / `main` under `docker/`, `worker/`, `inference_platform/`, … Pipeline **`worker-base`** (id 1, created by the bootstrap as `model-workers`) builds and pushes only the shared base image:
+**Platform (`aim-inference-platform`):** push to `main` under `docker/`, `worker/`, `inference_platform/`, … Pipeline **`worker-base`** (id 1, created by the bootstrap as `model-workers`) builds and pushes only the shared base image:
 
 - `aimlabacr.azurecr.io/aimlab/aim-inference-worker-base:<short-sha>`
 - `…:main`
@@ -121,7 +121,7 @@ The gateway stays on the local `aimlab/aim-inference-gateway:dev` tag (not in th
 
 ### Pin / roll back a worker
 
-Edit the `images:` block in [`overlays/k3s-local/kustomization.yaml`](overlays/k3s-local/kustomization.yaml), set `newTag` to a previous short-sha that exists in ACR, commit to `aimviwer2-AI`, then sync the `aim-inference` app (sync is manual today). To freeze Image Updater temporarily, remove the app’s `argocd-image-updater.argoproj.io/image-list` annotation.
+Edit the `images:` block in [`overlays/k3s-local/kustomization.yaml`](overlays/k3s-local/kustomization.yaml), set `newTag` to a previous short-sha that exists in ACR, commit to `main`, then sync the `aim-inference` app (sync is manual today). To freeze Image Updater temporarily, remove the app’s `argocd-image-updater.argoproj.io/image-list` annotation.
 
 ```bash
 az acr repository show-tags -n aimlabacr --repository aimlab/aim-inference-worker-pdac -o table

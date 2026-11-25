@@ -240,7 +240,7 @@
 
 <p>
   The shared runtime (queue client, health endpoints, overlay writer, Redis glue) is published
-  once from <code>AIMLab-UBC/extract_areas</code> as:
+  once from <code>AIMLab-UBC/aim-inference-platform</code> as:
 </p>
 <pre><code>aimlabacr.azurecr.io/aimlab/aim-inference-worker-base:main</code></pre>
 
@@ -313,7 +313,7 @@ Pod runs inference from Redis stream  inference:tasks:&lt;model&gt;</div>
     <tr>
       <td>Argo CD app</td>
       <td><code>aim-inference</code></td>
-      <td>Tracks <code>extract_areas</code> branch <code>aimviwer2-AI</code>, path <code>deploy/k8s/overlays/k3s-local</code></td>
+      <td>Tracks <code>aim-inference-platform</code> branch <code>main</code>, path <code>deploy/k8s/overlays/k3s-local</code></td>
     </tr>
     <tr>
       <td>Template repo</td>
@@ -414,8 +414,8 @@ az devops configure --defaults organization="$ADO_ORG" project=cpathportal</code
 <h3>3.5 Shared base image pipeline</h3>
 <p>
   Pipeline <code>worker-base</code> (id 1) builds from
-  <code>AIMLab-UBC/extract_areas</code> / <code>azure-pipelines.yml</code> on branches
-  <code>main</code> and <code>aimviwer2-AI</code>, but only when platform / Docker paths change.
+  <code>AIMLab-UBC/aim-inference-platform</code> / <code>azure-pipelines.yml</code> on branches
+  <code>main</code>, but only when platform / Docker paths change.
   It pushes <code>aim-inference-worker-base:&lt;sha&gt;</code> and <code>:main</code>.
 </p>
 <p>
@@ -761,10 +761,10 @@ python scripts/new_model.py &lt;name&gt; --min 0
 
 <h3>7.5 Push platform branch and sync</h3>
 <pre><code>cd ~/code/extract_areas
-git checkout aimviwer2-AI
+git checkout main
 git add deploy/k8s scripts docker   # whatever new_model.py touched
 git commit -m "Add worker-&lt;name&gt; Deployment and ACR image wiring"
-git push origin aimviwer2-AI
+git push origin main
 
 # Argo CD sync is manual today
 # UI: Applications → aim-inference → Sync
@@ -817,7 +817,7 @@ kubectl -n aim-inference get deploy worker-&lt;name&gt; \
     </tr>
     <tr>
       <td>CPU / env / scaling</td>
-      <td>Edit manifests under <code>deploy/k8s/</code>, push <code>aimviwer2-AI</code>, Sync Argo CD.</td>
+      <td>Edit manifests under <code>deploy/k8s/</code>, push <code>main</code>, Sync Argo CD.</td>
     </tr>
     <tr>
       <td>Roll back a bad model build</td>
@@ -896,13 +896,13 @@ kubectl -n aim-inference get deploy worker-&lt;name&gt; \
   <li><code>python scripts/new_model.py &lt;name&gt;</code> in <code>extract_areas</code></li>
   <li>Overlay: ACR image + <code>acr-pull</code> + <code>Always</code></li>
   <li>Weights under <code>/data/models</code></li>
-  <li>Push <code>aimviwer2-AI</code> and Sync Argo CD app <code>aim-inference</code></li>
+  <li>Push <code>main</code> and Sync Argo CD app <code>aim-inference</code></li>
   <li>Smoke-test via gateway / portal; watch KEDA scale the worker</li>
 </ul>
 
 <footer>
   Saved at <code>docs/CI_CD_SETUP_TUTORIAL.html</code> in
-  <code>AIMLab-UBC/extract_areas</code>. Reflects the live setup on host
+  <code>AIMLab-UBC/aim-inference-platform</code>. Reflects the live setup on host
   <code>ai-cpathportal</code> (k3s, 4× Tesla T4, Azure DevOps project
   <code>cpathportal</code>) as of November 2026.
   Companion overview: <a href="CPATHPORTAL_PLATFORM.md">CPATHPORTAL_PLATFORM.md</a>.

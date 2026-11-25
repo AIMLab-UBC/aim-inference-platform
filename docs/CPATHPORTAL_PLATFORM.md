@@ -141,8 +141,8 @@ gateway returns 429.
 
 ## 3. AI inference platform on k3s
 
-Repository: `extract_areas` (GitHub `AIMLab-UBC/extract_areas`, branch
-`aimviwer2-AI`), checked out at `~/code/extract_areas`. The k3s manifests are
+Repository: `aim-inference-platform` (GitHub `AIMLab-UBC/aim-inference-platform`, branch
+`main`), checked out at `~/code/extract_areas`. The k3s manifests are
 in `deploy/k8s/base`, plus the overlay `deploy/k8s/overlays/k3s-local` for
 this host.
 
@@ -186,7 +186,7 @@ committed.
 
 | Repository (GitHub, private) | Contains | Image |
 |---|---|---|
-| `AIMLab-UBC/extract_areas` | Gateway, worker runtime (`worker/`, `inference_platform/`), k8s manifests, Argo CD app | `aim-inference-worker-base` (CI); the gateway is built locally |
+| `AIMLab-UBC/aim-inference-platform` | Gateway, worker runtime (`worker/`, `inference_platform/`), k8s manifests, Argo CD app | `aim-inference-worker-base` (CI); the gateway is built locally |
 | `AIMLab-UBC/aim-inference-worker-pdac` | PDAC model code, `requirements.txt`, `Dockerfile` | `aim-inference-worker-pdac` |
 | `AIMLab-UBC/aim-inference-worker-hovernet` | HoVer-Net | `aim-inference-worker-hovernet` |
 | `AIMLab-UBC/aim-inference-worker-ec` | EC cancer | `aim-inference-worker-ec` |
@@ -211,7 +211,7 @@ so a model repo never copies platform code.
 
 | Pipeline | Source repo | Trigger | Pushes |
 |---|---|---|---|
-| `worker-base` (id 1; `bootstrap.sh` created it as `model-workers`) | `extract_areas` / `azure-pipelines.yml` | push to `main` / `aimviwer2-AI` | `aim-inference-worker-base:<sha>` and `:main` |
+| `worker-base` (id 1; `bootstrap.sh` created it as `model-workers`) | `extract_areas` / `azure-pipelines.yml` | push to `main` | `aim-inference-worker-base:<sha>` and `:main` |
 | `worker-pdac`, `worker-hovernet`, `worker-ec`, `worker-deepliif` (ids 3–6) | the model repo / `azure-pipelines.yml` | push to `main` | `aim-inference-worker-<model>:<sha>` and `:main` |
 | `tissue-api` | `aim-inference-tissue-api` / `azure-pipelines.yml` | push to `main`, or a finished `worker-base` run | `aim-inference-tissue-api:<sha>-<build id>` and `:main`, then restarts `deploy/tissue-api`, checks `/health`, and rolls back to the previous `:main` digest on failure |
 
@@ -248,7 +248,7 @@ In practice:
    rebuilds `worker-base:main`. Model images only pick it up when they are
    rebuilt, so queue the four `worker-*` pipelines (or push to each repo).
 3. **Change cluster manifests** (resources, env, scaling, new worker
-   Deployment): commit under `deploy/k8s/` on `aimviwer2-AI` and push. Argo CD
+   Deployment): commit under `deploy/k8s/` on `main` and push. Argo CD
    shows the app OutOfSync; sync it from the UI or with `argocd app sync
    aim-inference`. Sync is manual on purpose for now (see section 7).
 4. **Tissue API:** push to `main` in `aim-inference-tissue-api`. Pipeline
@@ -267,8 +267,8 @@ In practice:
 ### Argo CD and Image Updater
 
 The Application `aim-inference` (manifest:
-`deploy/k8s/argocd/application.yaml`) tracks `extract_areas` at
-`aimviwer2-AI`, path `deploy/k8s/overlays/k3s-local`. It ignores
+`deploy/k8s/argocd/application.yaml`) tracks `aim-inference-platform` at
+`main`, path `deploy/k8s/overlays/k3s-local`. It ignores
 `Deployment.spec.replicas`, because KEDA owns replica counts, and uses
 server-side apply.
 
@@ -340,7 +340,6 @@ cd /home/ubuntu/azdo-agent && sg docker -c './bin/Agent.Listener run --startupty
 | The gateway uses a local `:dev` image | Not reproducible from CI | Give it its own pipeline like `tissue-api` and point the overlay at ACR. |
 | Leftover Azure DevOps objects from the migration | Clutter | Delete the `seed-github-model-repos` pipeline (id 2), the `model-repo-bootstrap` repo, and the old `aim-inference-worker-*` mirror repos in ADO. |
 | A GitHub PAT was pasted into a terminal during setup | Credential exposure | Revoke it on GitHub and create a fine-grained token if one is needed again. |
-| Cluster manifests track `aimviwer2-AI`, not `main` | Two long-lived branches | Merge to `main` and repoint `targetRevision`. |
 
 ## 8. What was done in the November 2026 rollout
 
