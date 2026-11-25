@@ -1,6 +1,6 @@
 [submodule "module/DeepLiff"]
 	path = module/DeepLiff
-	url = git@github.com:AIMLab-UBC/DeepLIIF.git
+	url = https://github.com/AIMLab-UBC/DeepLIIF.git
 [submodule "module/hovernet"]
 	path = module/hovernet
 	url = https://github.com/vqdang/hover_net.git
