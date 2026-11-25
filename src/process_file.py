@@ -1,3 +1,4 @@
+import inspect
 import os
 import time
 
@@ -20,6 +21,26 @@ TILE_MICRONS = 128.0
 # three modalities are generated, converted to PIL and thrown away, so ask
 # inference to skip them.
 SEG_ONLY = True
+
+# How the five segmentation generators (IHC, Hema, DAPI, Lap2, Marker) are
+# blended, and the threshold that turns the blend into cells. These are the
+# values every DeepLIIF result so far was produced with. DeepLIIF 1.2.x changed
+# its defaults (equal 0.2 weights including Lap2, threshold 120), which moves
+# cell counts and % positive; pin ours so upgrading the library does not
+# silently change scores. Older DeepLIIF hard-codes the same weights.
+SEG_WEIGHTS = (0.25, 0.25, 0.25, 0.0, 0.25)
+SEG_THRESH = 150
+
+# DeepLIIF 1.2.x takes seg weights and OpenVINO options; older versions do not.
+_INFERENCE_ARGS = set(inspect.signature(inference).parameters)
+_INIT_NETS_ARGS = set(inspect.signature(getattr(init_nets, "__wrapped__", init_nets)).parameters)
+
+
+def _marker(images):
+    """The marker image: 'Marker' before DeepLIIF 1.2, '<mod id>-Marker' after."""
+    if 'Marker' in images:
+        return images['Marker']
+    return next((v for k, v in images.items() if k.endswith('Marker')), None)
 
 
 def _resolution_for_mpp(mpp, tile_size):
@@ -102,7 +123,13 @@ class ImageProcessor:
         request does not pay for loading eleven TorchScript modules.
         """
         model_dir = os.getenv('DEEPLIIF_MODEL_DIR', self.model_dir)
-        nets = init_nets(model_dir, False, self.opt)
+        # lru_cache keys on the exact call, so call it the way inference's
+        # run_dask does, or the converted nets land in an entry nobody reads
+        # and inference loads a second, fp32 copy.
+        if 'openvino_mode' in _INIT_NETS_ARGS:
+            nets = init_nets(model_dir, False, self.opt, openvino_mode=False, openvino_suffix="")
+        else:
+            nets = init_nets(model_dir, False, self.opt)
         if not self.use_fp16:
             return
         for name, net in list(nets.items()):
@@ -144,6 +171,10 @@ class ImageProcessor:
         # seg-only inference does not produce.
         seg_only = SEG_ONLY and not (color_dapi or color_marker)
 
+        extra = {}
+        if 'seg_weights' in _INFERENCE_ARGS:
+            extra['seg_weights'] = list(SEG_WEIGHTS)
+
         started = time.perf_counter()
         images = inference(
             img,
@@ -155,6 +186,7 @@ class ImageProcessor:
             color_marker=color_marker,
             opt=self.opt,
             seg_only=seg_only,
+            **extra,
         )
         inference_seconds = time.perf_counter() - started
 
@@ -167,7 +199,8 @@ class ImageProcessor:
                 # Same work as postprocess(), except that it derives the
                 # resolution from the tile size and we already know it.
                 overlay, refined, scoring = compute_final_results(
-                    img, images['Seg'], images.get('Marker'), resolution,
+                    img, images['Seg'], _marker(images), resolution,
+                    seg_thresh=SEG_THRESH,
                     patch_classifier_mask=patch_classifier_mask,
                     tissue_mask=tissue_mask,
                 )
