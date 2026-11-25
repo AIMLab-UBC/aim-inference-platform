@@ -25,7 +25,7 @@ The platform uses a consistent interface (`BaseAIModel`) for all AI models. This
 
 **Multi-repo day-2 flow (preferred):**
 
-1. **Create a model worker repo** from `aim-inference-worker-template` (Azure DevOps `cpathportal` or GitHub `pouya-codes`), or run `scripts/seed_model_repos.sh`.
+1. **Create a model worker repo** from `aim-inference-worker-template` (Azure DevOps `cpathportal` or GitHub `AIMLab-UBC`), or run `scripts/seed_model_repos.sh`.
 2. **Implement** `models/<name>_model.py` + `requirements.txt` in that repo (`Dockerfile` stays `FROM …/worker-base:main`).
 3. **Platform wiring** in `extract_areas`: `python scripts/new_model.py <name> --min 0` (Deployment, ScaledObject, config), plus Image Updater annotations.
 4. **CI**: register Azure Pipeline `worker-<name>` on pool `k3s-host`; push `main` → ACR `:sha` / `:main`.

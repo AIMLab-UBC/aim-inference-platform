@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Create pouya-codes/aim-inference-worker-* on GitHub (if missing) and push
+# Create AIMLab-UBC/aim-inference-worker-* on GitHub (if missing) and push
 # the seeded local repos. Requires GITHUB_TOKEN with repo scope.
 #
 # Until a GitHub PAT is available, the same trees are published as Azure Repos
@@ -14,7 +14,7 @@
 set -euo pipefail
 
 OUT="${1:-${HOME}/code/aim-inference-workers}"
-ORG="${GITHUB_ORG:-pouya-codes}"
+ORG="${GITHUB_ORG:-AIMLab-UBC}"
 API="https://api.github.com"
 
 [[ -n "${GITHUB_TOKEN:-}" ]] || {

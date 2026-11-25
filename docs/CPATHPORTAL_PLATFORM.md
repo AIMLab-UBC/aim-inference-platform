@@ -141,7 +141,7 @@ gateway returns 429.
 
 ## 3. AI inference platform on k3s
 
-Repository: `extract_areas` (GitHub `pouya-codes/extract_areas`, branch
+Repository: `extract_areas` (GitHub `AIMLab-UBC/extract_areas`, branch
 `aimviwer2-AI`), checked out at `~/code/extract_areas`. The k3s manifests are
 in `deploy/k8s/base`, plus the overlay `deploy/k8s/overlays/k3s-local` for
 this host.
@@ -186,13 +186,13 @@ committed.
 
 | Repository (GitHub, private) | Contains | Image |
 |---|---|---|
-| `pouya-codes/extract_areas` | Gateway, worker runtime (`worker/`, `inference_platform/`), k8s manifests, Argo CD app | `aim-inference-worker-base` (CI); the gateway is built locally |
-| `pouya-codes/aim-inference-worker-pdac` | PDAC model code, `requirements.txt`, `Dockerfile` | `aim-inference-worker-pdac` |
-| `pouya-codes/aim-inference-worker-hovernet` | HoVer-Net | `aim-inference-worker-hovernet` |
-| `pouya-codes/aim-inference-worker-ec` | EC cancer | `aim-inference-worker-ec` |
-| `pouya-codes/aim-inference-worker-deepliif` | DeepLIIF | `aim-inference-worker-deepliif` |
-| `pouya-codes/aim-inference-tissue-api` | SAM3 tissue detector: `app_refactored.py`, `mask_generator.py`, `config.json` | `aim-inference-tissue-api` |
-| `pouya-codes/aim-inference-worker-template` | Template repo for new models | none |
+| `AIMLab-UBC/extract_areas` | Gateway, worker runtime (`worker/`, `inference_platform/`), k8s manifests, Argo CD app | `aim-inference-worker-base` (CI); the gateway is built locally |
+| `AIMLab-UBC/aim-inference-worker-pdac` | PDAC model code, `requirements.txt`, `Dockerfile` | `aim-inference-worker-pdac` |
+| `AIMLab-UBC/aim-inference-worker-hovernet` | HoVer-Net | `aim-inference-worker-hovernet` |
+| `AIMLab-UBC/aim-inference-worker-ec` | EC cancer | `aim-inference-worker-ec` |
+| `AIMLab-UBC/aim-inference-worker-deepliif` | DeepLIIF | `aim-inference-worker-deepliif` |
+| `AIMLab-UBC/aim-inference-tissue-api` | SAM3 tissue detector: `app_refactored.py`, `mask_generator.py`, `config.json` | `aim-inference-tissue-api` |
+| `AIMLab-UBC/aim-inference-worker-template` | Template repo for new models | none |
 
 Every model Dockerfile starts `FROM aimlabacr.azurecr.io/aimlab/aim-inference-worker-base:main`
 and only adds its own requirements and code. The shared runtime (queue
@@ -207,7 +207,7 @@ so a model repo never copies platform code.
 | Container registry | `aimlabacr` → `aimlabacr.azurecr.io/aimlab/*` |
 | Azure DevOps | org `aimlabdev`, project `cpathportal` |
 | Agent pool | `k3s-host` (self-hosted). Agent `ai-cpathportal-k3s` runs on this VM from `/home/ubuntu/azdo-agent`. |
-| Service connections | `aim-inference-acr` (Azure Resource Manager, AcrPush), `github-extract-areas` (GitHub, used for checkout) |
+| Service connections | `aim-inference-acr` (Azure Resource Manager, AcrPush), `github-aimlab-ubc` (GitHub, used for checkout) |
 
 | Pipeline | Source repo | Trigger | Pushes |
 |---|---|---|---|
@@ -226,7 +226,7 @@ the same credential file. Then it runs `docker build`, tags `<sha>` and
 ```mermaid
 flowchart LR
   dev([Developer]) -->|git push main| gh[GitHub<br/>aim-inference-worker-model]
-  gh -->|webhook via github-extract-areas| ado[Azure DevOps<br/>pipeline worker-model]
+  gh -->|webhook via github-aimlab-ubc| ado[Azure DevOps<br/>pipeline worker-model]
   ado -->|runs on| agent[Self-hosted agent<br/>k3s-host pool, this VM]
   agent -->|"docker build FROM worker-base:main"| img[(ACR aimlabacr<br/>worker-model:sha and :main)]
   base[extract_areas push] -->|pipeline worker-base| baseimg[(ACR<br/>worker-base:main)]
@@ -280,11 +280,11 @@ because they pull `:main` on every pod start.
 
 ## 5. Adding a new model
 
-1. Create `pouya-codes/aim-inference-worker-<name>` from the
+1. Create `AIMLab-UBC/aim-inference-worker-<name>` from the
    `aim-inference-worker-template` repo. Put the model code under `models/`
    (and `module/`), and pin its Python dependencies in `requirements.txt`.
 2. In Azure DevOps `cpathportal`, create a pipeline from that repo's
-   `azure-pipelines.yml`. Use the GitHub connection `github-extract-areas` and
+   `azure-pipelines.yml`. Use the GitHub connection `github-aimlab-ubc` and
    pool `k3s-host`, and authorise the `aim-inference-acr` service connection on
    the first run.
 3. In `extract_areas`, run `scripts/new_model.py` (`make new-model`). It
@@ -376,7 +376,7 @@ cd /home/ubuntu/azdo-agent && sg docker -c './bin/Agent.Listener run --startupty
   `scripts/push_model_repos.sh`. The push script keeps the token out of
   `.git/config` (`010b35b`).
 - Azure DevOps project `cpathportal` with the self-hosted pool `k3s-host`, the
-  `aim-inference-acr` and `github-extract-areas` service connections, and
+  `aim-inference-acr` and `github-aimlab-ubc` service connections, and
   pipelines `worker-base` and `worker-*`, all green. All five images are in
   ACR, and the running workers use the `:main` images.
 - CI fixes along the way:

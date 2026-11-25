@@ -18,7 +18,7 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ADO_ORG="${ADO_ORG:-https://dev.azure.com/aimlabdev}"
 ADO_PROJECT="${ADO_PROJECT:-cpathportal}"
 POOL_NAME="${POOL_NAME:-k3s-host}"
-GITHUB_REPO="${GITHUB_REPO:-pouya-codes/extract_areas}"
+GITHUB_REPO="${GITHUB_REPO:-AIMLab-UBC/extract_areas}"
 SUBSCRIPTION_ID="${SUBSCRIPTION_ID:-$(az account show --query id -o tsv)}"
 ACR_ID="$(az acr show -n aimlabacr -g rg-aim-inference --query id -o tsv)"
 
@@ -82,8 +82,8 @@ else
 fi
 
 echo "==> 4/5 pipeline from azure-pipelines.yml (GitHub)"
-# Requires a GitHub service connection named github-extract-areas (create in UI
-# with a GitHub PAT that can read pouya-codes/extract_areas).
+# Requires a GitHub service connection named github-aimlab-ubc (create in UI
+# with a GitHub PAT that can read AIMLab-UBC/extract_areas).
 if az pipelines show --name model-workers &>/dev/null; then
   echo "    pipeline model-workers already exists"
 else
@@ -94,9 +94,9 @@ else
     --branch main \
     --yml-path azure-pipelines.yml \
     --skip-first-run true \
-    --service-connection github-extract-areas \
+    --service-connection github-aimlab-ubc \
     -o table || {
-      echo "    Create a GitHub service connection named github-extract-areas, then re-run." >&2
+      echo "    Create a GitHub service connection named github-aimlab-ubc, then re-run." >&2
     }
 fi
 

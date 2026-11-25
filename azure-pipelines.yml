@@ -1,5 +1,5 @@
 # Platform pipeline: build and push the shared GPU worker base image.
-# Per-model images are built from pouya-codes/aim-inference-worker-* repos.
+# Per-model images are built from AIMLab-UBC/aim-inference-worker-* repos.
 #
 # Pool: self-hosted agent on the k3s host (pool name k3s-host).
 # Service connection: Azure Resource Manager named aim-inference-acr

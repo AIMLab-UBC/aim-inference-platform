@@ -240,7 +240,7 @@
 
 <p>
   The shared runtime (queue client, health endpoints, overlay writer, Redis glue) is published
-  once from <code>pouya-codes/extract_areas</code> as:
+  once from <code>AIMLab-UBC/extract_areas</code> as:
 </p>
 <pre><code>aimlabacr.azurecr.io/aimlab/aim-inference-worker-base:main</code></pre>
 
@@ -249,7 +249,7 @@
 <div class="diagram">Developer
    │  git push origin main
    ▼
-GitHub (pouya-codes/aim-inference-worker-&lt;name&gt;)
+GitHub (AIMLab-UBC/aim-inference-worker-&lt;name&gt;)
    │  webhook (installed by Azure DevOps)
    ▼
 Azure DevOps pipeline  worker-&lt;name&gt;
@@ -292,7 +292,7 @@ Pod runs inference from Redis stream  inference:tasks:&lt;model&gt;</div>
     </tr>
     <tr>
       <td>GitHub service connection</td>
-      <td><code>github-extract-areas</code></td>
+      <td><code>github-aimlab-ubc</code></td>
       <td>Checkout + webhook installation on GitHub repos</td>
     </tr>
     <tr>
@@ -317,7 +317,7 @@ Pod runs inference from Redis stream  inference:tasks:&lt;model&gt;</div>
     </tr>
     <tr>
       <td>Template repo</td>
-      <td><code>pouya-codes/aim-inference-worker-template</code></td>
+      <td><code>AIMLab-UBC/aim-inference-worker-template</code></td>
       <td>Starting point for a new model repo</td>
     </tr>
     <tr>
@@ -393,10 +393,10 @@ az devops configure --defaults organization="$ADO_ORG" project=cpathportal</code
 
 <div class="two-col">
   <div class="card">
-    <h4>GitHub · <code>github-extract-areas</code></h4>
+    <h4>GitHub · <code>github-aimlab-ubc</code></h4>
     <p>
       Project settings → Service connections → New → <strong>GitHub</strong> (OAuth or GitHub App).
-      Grant access to every <code>pouya-codes/aim-inference-worker-*</code> repo
+      Grant access to every <code>AIMLab-UBC/aim-inference-worker-*</code> repo
       <em>and</em> <code>extract_areas</code>. The account needs <strong>admin</strong> on those repos
       so Azure DevOps can create webhooks.
     </p>
@@ -414,7 +414,7 @@ az devops configure --defaults organization="$ADO_ORG" project=cpathportal</code
 <h3>3.5 Shared base image pipeline</h3>
 <p>
   Pipeline <code>worker-base</code> (id 1) builds from
-  <code>pouya-codes/extract_areas</code> / <code>azure-pipelines.yml</code> on branches
+  <code>AIMLab-UBC/extract_areas</code> / <code>azure-pipelines.yml</code> on branches
   <code>main</code> and <code>aimviwer2-AI</code>, but only when platform / Docker paths change.
   It pushes <code>aim-inference-worker-base:&lt;sha&gt;</code> and <code>:main</code>.
 </p>
@@ -458,7 +458,7 @@ az devops configure --defaults organization="$ADO_ORG" project=cpathportal</code
       <h4>Register one Azure Pipeline per GitHub repo</h4>
       <p>
         Pipelines 3–6 were created against GitHub via service connection
-        <code>github-extract-areas</code>, pool <code>k3s-host</code>, YAML path
+        <code>github-aimlab-ubc</code>, pool <code>k3s-host</code>, YAML path
         <code>azure-pipelines.yml</code>. Early attempts that pointed at Azure DevOps
         mirror repos failed checkout auth — they were re-pointed to GitHub.
       </p>
@@ -511,14 +511,14 @@ az devops configure --defaults organization="$ADO_ORG" project=cpathportal</code
 
 <h3>Step A — Create the GitHub repository</h3>
 <ol>
-  <li>Open <a href="https://github.com/pouya-codes/aim-inference-worker-template">aim-inference-worker-template</a>.</li>
+  <li>Open <a href="https://github.com/AIMLab-UBC/aim-inference-worker-template">aim-inference-worker-template</a>.</li>
   <li>Use <strong>Use this template → Create a new repository</strong>.</li>
-  <li>Owner: <code>pouya-codes</code>. Name: <code>aim-inference-worker-&lt;name&gt;</code>. Private.</li>
+  <li>Owner: <code>AIMLab-UBC</code>. Name: <code>aim-inference-worker-&lt;name&gt;</code>. Private.</li>
   <li>Or clone the template locally and push:
-<pre><code>gh repo create pouya-codes/aim-inference-worker-&lt;name&gt; \
-  --private --template pouya-codes/aim-inference-worker-template</code></pre>
+<pre><code>gh repo create AIMLab-UBC/aim-inference-worker-&lt;name&gt; \
+  --private --template AIMLab-UBC/aim-inference-worker-template</code></pre>
   </li>
-  <li>In GitHub → the Azure Pipelines / OAuth app used by <code>github-extract-areas</code> →
+  <li>In GitHub → the Azure Pipelines / OAuth app used by <code>github-aimlab-ubc</code> →
       grant this new repo. Admin access is required for webhooks.</li>
 </ol>
 
@@ -616,8 +616,8 @@ git push -u origin main</code></pre>
 <ol>
   <li>Open <a href="https://dev.azure.com/aimlabdev/cpathportal/_build">Pipelines</a> → <strong>New pipeline</strong>.</li>
   <li>Where is your code? → <strong>GitHub</strong>.</li>
-  <li>Pick connection <code>github-extract-areas</code> (or authorize again if prompted).</li>
-  <li>Select <code>pouya-codes/aim-inference-worker-&lt;name&gt;</code>.</li>
+  <li>Pick connection <code>github-aimlab-ubc</code> (or authorize again if prompted).</li>
+  <li>Select <code>AIMLab-UBC/aim-inference-worker-&lt;name&gt;</code>.</li>
   <li>Configure → <strong>Existing Azure Pipelines YAML file</strong> → path <code>/azure-pipelines.yml</code>, branch <code>main</code>.</li>
   <li>Rename the pipeline to <code>worker-&lt;name&gt;</code> (⋯ → Rename / pipeline settings).</li>
   <li>Confirm the default agent pool is <code>k3s-host</code> (the YAML <code>pool:</code> block should already set this).</li>
@@ -630,12 +630,12 @@ git push -u origin main</code></pre>
   --org https://dev.azure.com/aimlabdev \
   --project cpathportal \
   --name worker-&lt;name&gt; \
-  --repository pouya-codes/aim-inference-worker-&lt;name&gt; \
+  --repository AIMLab-UBC/aim-inference-worker-&lt;name&gt; \
   --repository-type github \
   --branch main \
   --yml-path azure-pipelines.yml \
   --skip-first-run false \
-  --service-connection github-extract-areas \
+  --service-connection github-aimlab-ubc \
   -o table</code></pre>
 
 <div class="warn">
@@ -701,12 +701,12 @@ az devops invoke \
   --in-file /tmp/def-put.json -o json</code></pre>
 
 <p>Confirm Azure DevOps sees the hook:</p>
-<pre><code>EP=85897963-fd50-40ca-8838-e25a362675c5   # id of github-extract-areas
+<pre><code>EP=85897963-fd50-40ca-8838-e25a362675c5   # id of github-aimlab-ubc
 az devops invoke --org https://dev.azure.com/aimlabdev \
   --area build --resource webhooks \
   --route-parameters project=cpathportal providerName=github \
   --query-parameters serviceEndpointId=$EP \
-    repository=pouya-codes/aim-inference-worker-&lt;name&gt; \
+    repository=AIMLab-UBC/aim-inference-worker-&lt;name&gt; \
   --http-method GET --api-version 7.1 -o json</code></pre>
 <p>Expected: <code>count: 1</code> and a <code>url</code> under <code>dev.azure.com/.../externalEvents</code>.</p>
 
@@ -844,7 +844,7 @@ kubectl -n aim-inference get deploy worker-&lt;name&gt; \
     <tr>
       <td><code>fatal: Authentication failed</code> for <code>dev.azure.com/.../_git/…</code></td>
       <td>Pipeline still points at an ADO mirror repo</td>
-      <td>Edit pipeline → Get sources → GitHub repo via <code>github-extract-areas</code></td>
+      <td>Edit pipeline → Get sources → GitHub repo via <code>github-aimlab-ubc</code></td>
     </tr>
     <tr>
       <td><code>permission denied</code> on <code>docker.sock</code></td>
@@ -884,7 +884,7 @@ kubectl -n aim-inference get deploy worker-&lt;name&gt; \
 
 <ul class="checklist">
   <li>Create private GitHub repo from <code>aim-inference-worker-template</code></li>
-  <li>Grant <code>github-extract-areas</code> (OAuth/App) admin access to the new repo</li>
+  <li>Grant <code>github-aimlab-ubc</code> (OAuth/App) admin access to the new repo</li>
   <li>Implement <code>models/&lt;name&gt;_model.py</code> + <code>requirements.txt</code></li>
   <li>Set <code>MODEL_NAME</code> / <code>IMAGE_NAME</code> in Dockerfile and <code>azure-pipelines.yml</code></li>
   <li>Keep <code>pr: none</code>; <code>DOCKER_CONFIG</code> before <code>az acr login</code></li>
@@ -902,7 +902,7 @@ kubectl -n aim-inference get deploy worker-&lt;name&gt; \
 
 <footer>
   Saved at <code>docs/CI_CD_SETUP_TUTORIAL.html</code> in
-  <code>pouya-codes/extract_areas</code>. Reflects the live setup on host
+  <code>AIMLab-UBC/extract_areas</code>. Reflects the live setup on host
   <code>ai-cpathportal</code> (k3s, 4× Tesla T4, Azure DevOps project
   <code>cpathportal</code>) as of November 2026.
   Companion overview: <a href="CPATHPORTAL_PLATFORM.md">CPATHPORTAL_PLATFORM.md</a>.

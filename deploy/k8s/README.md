@@ -61,7 +61,7 @@ flowchart LR
    # ADO_PROJECT defaults to cpathportal
    ```
 
-4. **GitHub service connection**: in project `cpathportal`, add a GitHub connection named `github-extract-areas` that can read `pouya-codes/extract_areas` (needed before the pipeline create step).
+4. **GitHub service connection**: in project `cpathportal`, add a GitHub connection named `github-aimlab-ubc` that can read `AIMLab-UBC/extract_areas` (needed before the pipeline create step).
 
 5. **Project, pool, ARM connection, pipeline, agent**:
 
@@ -106,14 +106,14 @@ flowchart LR
 - `aimlabacr.azurecr.io/aimlab/aim-inference-worker-base:<short-sha>`
 - `…:main`
 
-**Per-model workers:** each model lives in its own private GitHub repo, `pouya-codes/aim-inference-worker-<model>` (created with `scripts/seed_model_repos.sh` / `push_model_repos.sh`). Push that repo’s `main` → pipeline **`worker-<model>`** on pool `k3s-host` builds `FROM …/worker-base:main` and pushes:
+**Per-model workers:** each model lives in its own private GitHub repo, `AIMLab-UBC/aim-inference-worker-<model>` (created with `scripts/seed_model_repos.sh` / `push_model_repos.sh`). Push that repo’s `main` → pipeline **`worker-<model>`** on pool `k3s-host` builds `FROM …/worker-base:main` and pushes:
 
 - `aimlabacr.azurecr.io/aimlab/aim-inference-worker-<model>:<short-sha>`
 - `…:main` (mutable tag Image Updater watches)
 
 Workers run `image: …/aim-inference-worker-<model>:main` with `acr-pull` and `imagePullPolicy: Always` (k3s-local overlay). Rebuilding one model repo updates only that ACR image; the next scale-up from zero (or `kubectl -n aim-inference rollout restart deploy/worker-<model>`) runs the new build. Image Updater annotations remain on the Application for digest write-back, but the updater currently skips the app because Argo CD 3.x leaves `status.sourceType` empty (`spec.source.kustomize: {}` did not help).
 
-**Tissue API:** its own repo, `pouya-codes/aim-inference-tissue-api`, and pipeline **`tissue-api`**. It pushes `…/aim-inference-tissue-api:<sha>-<build id>` and `:main`, then restarts `deploy/tissue-api` (maxSurge 1, so the old pod serves until the new one is Ready), checks `/health`, and on failure re-points `:main` at the previous digest and runs `kubectl rollout undo`. A finished `worker-base` run also triggers it.
+**Tissue API:** its own repo, `AIMLab-UBC/aim-inference-tissue-api`, and pipeline **`tissue-api`**. It pushes `…/aim-inference-tissue-api:<sha>-<build id>` and `:main`, then restarts `deploy/tissue-api` (maxSurge 1, so the old pod serves until the new one is Ready), checks `/health`, and on failure re-points `:main` at the previous digest and runs `kubectl rollout undo`. A finished `worker-base` run also triggers it.
 
 The gateway stays on the local `aimlab/aim-inference-gateway:dev` tag (not in these pipelines).
 

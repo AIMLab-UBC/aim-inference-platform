@@ -22,7 +22,7 @@ The pipeline definition lives at the repo root: [`azure-pipelines.yml`](../../az
 ## You must do once in the browser
 
 1. Create a PAT with: Agent Pools (Read & manage), Build (Read & execute), Code (Read), Service Connections (Read, query & manage).
-2. In project **`cpathportal`**, add a **GitHub** service connection named **`github-extract-areas`** that can read `pouya-codes/extract_areas`.
+2. In project **`cpathportal`**, add a **GitHub** service connection named **`github-aimlab-ubc`** that can read `AIMLab-UBC/extract_areas`.
 
 ```bash
 export AZURE_DEVOPS_EXT_PAT=...

@@ -7,7 +7,7 @@ set -euo pipefail
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="${1:-${HOME}/code/aim-inference-workers}"
 BASE_IMAGE="${BASE_IMAGE:-aimlabacr.azurecr.io/aimlab/aim-inference-worker-base:main}"
-ORG="${GITHUB_ORG:-pouya-codes}"
+ORG="${GITHUB_ORG:-AIMLab-UBC}"
 
 write_pipeline() {
   local dest="$1" image_suffix="$2"

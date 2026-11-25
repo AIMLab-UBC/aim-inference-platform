@@ -65,7 +65,7 @@ if [[ -n "${GITHUB_TOKEN:-}" ]]; then
   # Repository credentials for both Argo CD and Image Updater write-back.
   kubectl -n argocd create secret generic repo-extract-areas \
     --from-literal=type=git \
-    --from-literal=url=https://github.com/pouya-codes/extract_areas.git \
+    --from-literal=url=https://github.com/AIMLab-UBC/extract_areas.git \
     --from-literal=password="${GITHUB_TOKEN}" \
     --from-literal=username=git \
     --dry-run=client -o yaml | kubectl apply -f -
