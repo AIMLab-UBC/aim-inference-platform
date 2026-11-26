@@ -7,6 +7,9 @@
 # Without --apply it only prints what would change. Defaults: FROM=pouya-codes,
 # TO=AIMLab-UBC, RENAMES="extract_areas=aim-inference-platform" (space-separated
 # old=new repo names; override any of them in the environment).
+# The connection must be authorised as the repos' owner: Azure DevOps installs
+# a push webhook on each repo, and on personal-account repos GitHub only lets
+# the owner manage hooks (a collaborator gets "Unable to configure a service").
 set -euo pipefail
 
 CONN_NAME="${1:?usage: $0 <service-connection-name> [--apply]}"
@@ -64,7 +67,7 @@ PY
     az devops invoke --area build --resource definitions --http-method PUT \
       --route-parameters project="$PROJECT" definitionId="$id" \
       --in-file "$work/$name.json" --api-version 7.1 \
-      --query "repository.{repo:name,conn:properties.connectedServiceId}" -o tsv 2>/dev/null
+      --query "repository.{repo:name,conn:properties.connectedServiceId}" -o tsv 2>&1 | grep -v '^WARNING' 
   fi
 done
 [[ "$APPLY" == "--apply" ]] || echo "(dry run; add --apply to save)"
